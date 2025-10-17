@@ -12,23 +12,39 @@ import (
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		log.Printf("🌐 %s %s %s - %s", r.Method, r.URL.Path, r.RemoteAddr, r.UserAgent())
+		
+		// Логируем только в development режиме
+		if os.Getenv("ENVIRONMENT") != "production" {
+			log.Printf("🌐 %s %s %s", r.Method, r.URL.Path, r.RemoteAddr)
+		}
 		
 		next(w, r)
 		
+		// Логируем только медленные запросы в production
 		duration := time.Since(start)
-		log.Printf("⏱️  %s %s completed in %v", r.Method, r.URL.Path, duration)
+		if os.Getenv("ENVIRONMENT") == "production" && duration > 100*time.Millisecond {
+			log.Printf("SLOW: %s %s took %v", r.Method, r.URL.Path, duration)
+		} else if os.Getenv("ENVIRONMENT") != "production" {
+			log.Printf("⏱️  %s %s completed in %v", r.Method, r.URL.Path, duration)
+		}
 	}
 }
 
 func main() {
-	log.Println("🚀 Запуск Garage Barbershop сервера...")
+	// Логируем запуск только в development
+	if os.Getenv("ENVIRONMENT") != "production" {
+		log.Println("🚀 Запуск Garage Barbershop сервера...")
+	}
 	
 	// Обработчик для главной страницы
 	http.HandleFunc("/", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		log.Println("📄 Обслуживание главной страницы")
 		
+		// Логируем только в development
+		if os.Getenv("ENVIRONMENT") != "production" {
+			log.Println("📄 Обслуживание главной страницы")
+		}
+
 		html := `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -81,14 +97,18 @@ func main() {
     </div>
 </body>
 </html>`
-		
+
 		fmt.Fprint(w, html)
 	}))
 
 	// Обработчик для API статуса
 	http.HandleFunc("/api/status", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		log.Println("📊 Запрос статуса API")
+		
+		// Логируем только в development
+		if os.Getenv("ENVIRONMENT") != "production" {
+			log.Println("📊 Запрос статуса API")
+		}
 		fmt.Fprintf(w, `{
 			"status": "ok",
 			"service": "Garage Barbershop",
@@ -100,7 +120,7 @@ func main() {
 
 	// Обработчик для health check
 	http.HandleFunc("/health", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("💚 Health check запрос")
+		// Health check не логируем - он вызывается часто
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "OK")
 	}))
@@ -111,13 +131,17 @@ func main() {
 		port = "8080"
 	}
 
-	// Логируем информацию о запуске
-	log.Printf("🚀 Garage Barbershop сервер запускается на порту %s", port)
-	log.Printf("📱 Откройте http://localhost:%s в браузере", port)
-	log.Printf("🌍 Environment: %s", os.Getenv("ENVIRONMENT"))
-	log.Printf("⏰ Время запуска: %s", time.Now().Format(time.RFC3339))
+	// Логируем информацию о запуске только в development
+	if os.Getenv("ENVIRONMENT") != "production" {
+		log.Printf("🚀 Garage Barbershop сервер запускается на порту %s", port)
+		log.Printf("📱 Откройте http://localhost:%s в браузере", port)
+		log.Printf("🌍 Environment: %s", os.Getenv("ENVIRONMENT"))
+		log.Printf("⏰ Время запуска: %s", time.Now().Format(time.RFC3339))
+		log.Println("✅ Сервер готов к работе!")
+	} else {
+		// В production только минимальная информация
+		log.Printf("Server starting on port %s", port)
+	}
 	
-	// Запускаем сервер с логированием
-	log.Println("✅ Сервер готов к работе!")
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
