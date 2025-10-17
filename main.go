@@ -34,6 +34,36 @@ func connectDB() error {
 	}
 
 	log.Println("✅ Подключение к PostgreSQL успешно")
+
+	// Выполняем миграции
+	if err := migrateDB(); err != nil {
+		return fmt.Errorf("ошибка миграции БД: %v", err)
+	}
+
+	return nil
+}
+
+// Миграция базы данных
+func migrateDB() error {
+	if db == nil {
+		return nil
+	}
+
+	// Автоматическая миграция всех моделей
+	err := db.AutoMigrate(
+		&User{},
+		&Service{},
+		&Appointment{},
+		&WorkingHours{},
+		&Payment{},
+		&Review{},
+	)
+
+	if err != nil {
+		return fmt.Errorf("ошибка миграции: %v", err)
+	}
+
+	log.Println("✅ Миграция базы данных выполнена успешно")
 	return nil
 }
 
@@ -51,7 +81,7 @@ func connectRedis() error {
 	}
 
 	rdb = redis.NewClient(opt)
-	
+
 	// Проверяем подключение
 	ctx := context.Background()
 	_, err = rdb.Ping(ctx).Result()
@@ -192,7 +222,7 @@ func main() {
 	// Обработчик для проверки статуса баз данных
 	http.HandleFunc("/api/db-status", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		status := map[string]interface{}{
 			"postgresql": "disconnected",
 			"redis":      "disconnected",
@@ -220,6 +250,43 @@ func main() {
 			"databases": %+v,
 			"timestamp": "%s"
 		}`, status, time.Now().Format(time.RFC3339))
+	}))
+
+	// Обработчик для получения информации о моделях
+	http.HandleFunc("/api/models", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		models := map[string]interface{}{
+			"User": map[string]interface{}{
+				"description": "Пользователи системы (барберы и клиенты)",
+				"fields":      []string{"ID", "TelegramID", "Username", "FirstName", "LastName", "Phone", "Email", "Role", "IsActive", "Specialties", "Experience", "Rating", "Preferences", "Notes"},
+			},
+			"Service": map[string]interface{}{
+				"description": "Услуги барбера",
+				"fields":      []string{"ID", "Name", "Description", "Price", "Duration", "IsActive", "BarberID"},
+			},
+			"Appointment": map[string]interface{}{
+				"description": "Записи на услуги",
+				"fields":      []string{"ID", "DateTime", "Duration", "Status", "ClientID", "BarberID", "ServiceID", "Notes", "Price", "PaymentStatus"},
+			},
+			"WorkingHours": map[string]interface{}{
+				"description": "Рабочие часы барбера",
+				"fields":      []string{"ID", "DayOfWeek", "StartTime", "EndTime", "BreakStart", "BreakEnd", "IsActive", "BarberID"},
+			},
+			"Payment": map[string]interface{}{
+				"description": "Платежи",
+				"fields":      []string{"ID", "Amount", "Currency", "Status", "PaymentMethod", "AppointmentID", "ExternalID", "ReceiptURL"},
+			},
+			"Review": map[string]interface{}{
+				"description": "Отзывы клиентов",
+				"fields":      []string{"ID", "Rating", "Comment", "ClientID", "BarberID", "AppointmentID"},
+			},
+		}
+
+		fmt.Fprintf(w, `{
+			"models": %+v,
+			"timestamp": "%s"
+		}`, models, time.Now().Format(time.RFC3339))
 	}))
 
 	// Получаем порт из переменной окружения или используем 8080
