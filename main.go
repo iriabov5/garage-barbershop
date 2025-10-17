@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"garage-barbershop/internal/models"
+
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -51,12 +53,12 @@ func migrateDB() error {
 
 	// Автоматическая миграция всех моделей
 	err := db.AutoMigrate(
-		&User{},
-		&Service{},
-		&Appointment{},
-		&WorkingHours{},
-		&Payment{},
-		&Review{},
+		&models.User{},
+		&models.Service{},
+		&models.Appointment{},
+		&models.WorkingHours{},
+		&models.Payment{},
+		&models.Review{},
 	)
 
 	if err != nil {
