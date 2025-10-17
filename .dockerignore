@@ -1,0 +1,8 @@
+# Игнорируем ненужные файлы при сборке Docker образа
+.git
+.gitignore
+README.md
+DEVELOPMENT_PLAN.md
+Dockerfile
+.dockerignore
+*.md
