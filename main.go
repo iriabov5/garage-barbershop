@@ -330,17 +330,25 @@ func main() {
 	// Получаем порт из конфигурации
 	port := cfg.Port
 
-	// Логируем информацию о запуске только в development
-	if !cfg.IsProduction() {
-		log.Printf("🚀 Garage Barbershop сервер запускается на порту %s", port)
-		log.Printf("📱 Откройте http://localhost:%s в браузере", port)
-		log.Printf("🌍 Environment: %s", cfg.Environment)
-		log.Printf("⏰ Время запуска: %s", time.Now().Format(time.RFC3339))
-		log.Println("✅ Сервер готов к работе!")
+	// Логируем информацию о запуске
+	log.Printf("🚀 Garage Barbershop сервер запускается на порту %s", port)
+	log.Printf("🌍 Environment: %s", cfg.Environment)
+	log.Printf("⏰ Время запуска: %s", time.Now().Format(time.RFC3339))
+	
+	// Проверяем переменные окружения
+	if cfg.DatabaseURL == "" {
+		log.Println("⚠️  DATABASE_URL не установлен")
 	} else {
-		// В production только минимальная информация
-		log.Printf("Server starting on port %s", port)
+		log.Println("✅ DATABASE_URL установлен")
 	}
+	
+	if cfg.RedisURL == "" {
+		log.Println("⚠️  REDIS_URL не установлен")
+	} else {
+		log.Println("✅ REDIS_URL установлен")
+	}
+	
+	log.Println("✅ Сервер готов к работе!")
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
