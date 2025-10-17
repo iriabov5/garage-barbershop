@@ -8,34 +8,35 @@ import (
 	"os"
 	"time"
 
+	"garage-barbershop/internal/config"
+	"garage-barbershop/internal/database"
+	"garage-barbershop/internal/handlers"
 	"garage-barbershop/internal/models"
+	"garage-barbershop/internal/repositories"
+	"garage-barbershop/internal/services"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 // Глобальные переменные для подключений
 var (
-	db  *gorm.DB
+	cfg *config.Config
+	db  *database.Database
 	rdb *redis.Client
 )
 
 // Подключение к PostgreSQL
 func connectDB() error {
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
+	if cfg.DatabaseURL == "" {
 		log.Println("⚠️  DATABASE_URL не установлен, пропускаем подключение к БД")
 		return nil
 	}
 
 	var err error
-	db, err = gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+	db, err = database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("ошибка подключения к PostgreSQL: %v", err)
 	}
-
-	log.Println("✅ Подключение к PostgreSQL успешно")
 
 	// Выполняем миграции
 	if err := migrateDB(); err != nil {
@@ -52,7 +53,7 @@ func migrateDB() error {
 	}
 
 	// Автоматическая миграция всех моделей
-	err := db.AutoMigrate(
+	err := db.Migrate(
 		&models.User{},
 		&models.Service{},
 		&models.Appointment{},
@@ -65,7 +66,6 @@ func migrateDB() error {
 		return fmt.Errorf("ошибка миграции: %v", err)
 	}
 
-	log.Println("✅ Миграция базы данных выполнена успешно")
 	return nil
 }
 
@@ -95,6 +95,36 @@ func connectRedis() error {
 	return nil
 }
 
+// Настройка зависимостей (Dependency Injection)
+func setupDependencies() {
+	if db == nil {
+		log.Println("⚠️  База данных не подключена, пропускаем настройку зависимостей")
+		return
+	}
+
+	// Создаем репозитории
+	userRepo := repositories.NewUserRepository(db.DB)
+
+	// Создаем сервисы
+	userService := services.NewUserService(userRepo)
+
+	// Создаем хендлеры
+	userHandler := handlers.NewUserHandler(userService)
+
+	// Настраиваем API routes
+	setupAPIRoutes(userHandler)
+}
+
+// Настройка API маршрутов
+func setupAPIRoutes(userHandler *handlers.UserHandler) {
+	// API для пользователей
+	http.HandleFunc("/api/users", userHandler.GetUsers)
+	http.HandleFunc("/api/users/", userHandler.GetUser)
+	http.HandleFunc("/api/users/create", userHandler.CreateUser)
+	
+	log.Println("✅ API маршруты настроены")
+}
+
 // Middleware для логирования HTTP запросов
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -118,8 +148,11 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	// Загружаем конфигурацию
+	cfg = config.LoadConfig()
+
 	// Логируем запуск только в development
-	if os.Getenv("ENVIRONMENT") != "production" {
+	if !cfg.IsProduction() {
 		log.Println("🚀 Запуск Garage Barbershop сервера...")
 	}
 
@@ -131,6 +164,9 @@ func main() {
 	if err := connectRedis(); err != nil {
 		log.Printf("❌ Ошибка подключения к Redis: %v", err)
 	}
+
+	// Инициализируем зависимости
+	setupDependencies()
 
 	// Обработчик для главной страницы
 	http.HandleFunc("/", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
@@ -232,7 +268,7 @@ func main() {
 
 		// Проверяем PostgreSQL
 		if db != nil {
-			sqlDB, err := db.DB()
+			sqlDB, err := db.DB.DB()
 			if err == nil {
 				if err := sqlDB.Ping(); err == nil {
 					status["postgresql"] = "connected"
@@ -291,17 +327,14 @@ func main() {
 		}`, models, time.Now().Format(time.RFC3339))
 	}))
 
-	// Получаем порт из переменной окружения или используем 8080
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	// Получаем порт из конфигурации
+	port := cfg.Port
 
 	// Логируем информацию о запуске только в development
-	if os.Getenv("ENVIRONMENT") != "production" {
+	if !cfg.IsProduction() {
 		log.Printf("🚀 Garage Barbershop сервер запускается на порту %s", port)
 		log.Printf("📱 Откройте http://localhost:%s в браузере", port)
-		log.Printf("🌍 Environment: %s", os.Getenv("ENVIRONMENT"))
+		log.Printf("🌍 Environment: %s", cfg.Environment)
 		log.Printf("⏰ Время запуска: %s", time.Now().Format(time.RFC3339))
 		log.Println("✅ Сервер готов к работе!")
 	} else {
