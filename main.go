@@ -28,8 +28,8 @@ func main() {
 	http.HandleFunc("/", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		log.Println("📄 Обслуживание главной страницы")
-		fmt.Fprintf(w, `
-<!DOCTYPE html>
+		
+		html := `<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -80,9 +80,10 @@ func main() {
         </div>
     </div>
 </body>
-</html>
-		`)
-	})
+</html>`
+		
+		fmt.Fprint(w, html)
+	}))
 
 	// Обработчик для API статуса
 	http.HandleFunc("/api/status", loggingMiddleware(func(w http.ResponseWriter, r *http.Request) {
