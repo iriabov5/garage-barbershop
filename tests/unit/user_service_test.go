@@ -59,7 +59,7 @@ func TestUserService_CreateUser(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
 	userService := services.NewUserService(mockRepo)
-	
+
 	user := &models.User{
 		TelegramID: 12345,
 		Username:   "testuser",
@@ -84,7 +84,7 @@ func TestUserService_CreateUser_Error(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
 	userService := services.NewUserService(mockRepo)
-	
+
 	user := &models.User{
 		TelegramID: 12345,
 		Username:   "testuser",
@@ -110,7 +110,7 @@ func TestUserService_RegisterBarber(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
 	userService := services.NewUserService(mockRepo)
-	
+
 	telegramID := int64(12345)
 	username := "barber_user"
 	firstName := "Ivan"
@@ -140,7 +140,7 @@ func TestUserService_RegisterClient(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
 	userService := services.NewUserService(mockRepo)
-	
+
 	telegramID := int64(67890)
 	username := "client_user"
 	firstName := "Jane"
@@ -168,7 +168,7 @@ func TestUserService_GetUserByID(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
 	userService := services.NewUserService(mockRepo)
-	
+
 	userID := uint(1)
 	expectedUser := &models.User{
 		ID:         userID,
@@ -199,7 +199,7 @@ func TestUserService_GetUserByID_NotFound(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
 	userService := services.NewUserService(mockRepo)
-	
+
 	userID := uint(999)
 
 	// Настраиваем мок для возврата ошибки

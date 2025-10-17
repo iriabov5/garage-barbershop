@@ -121,7 +121,7 @@ func setupAPIRoutes(userHandler *handlers.UserHandler) {
 	http.HandleFunc("/api/users", userHandler.GetUsers)
 	http.HandleFunc("/api/users/", userHandler.GetUser)
 	http.HandleFunc("/api/users/create", userHandler.CreateUser)
-	
+
 	log.Println("✅ API маршруты настроены")
 }
 
