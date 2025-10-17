@@ -27,14 +27,10 @@ func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	var users interface{}
 	var err error
 
-	switch role {
-	case "barber":
-		users, err = h.userService.GetBarbers()
-	case "client":
-		users, err = h.userService.GetClients()
-	default:
-		// Возвращаем всех пользователей (можно добавить метод GetAllUsers)
-		users = []interface{}{}
+	if role != "" {
+		users, err = h.userService.GetUsersByRole(role)
+	} else {
+		users, err = h.userService.GetAllUsers()
 	}
 
 	if err != nil {
@@ -109,4 +105,3 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(createdUser)
 }
-

@@ -14,6 +14,8 @@ type UserService interface {
 	DeleteUser(id uint) error
 	GetBarbers() ([]models.User, error)
 	GetClients() ([]models.User, error)
+	GetAllUsers() ([]models.User, error)
+	GetUsersByRole(role string) ([]models.User, error)
 	RegisterBarber(telegramID int64, username, firstName, lastName string) (*models.User, error)
 	RegisterClient(telegramID int64, username, firstName, lastName string) (*models.User, error)
 }
@@ -103,3 +105,12 @@ func (s *userService) RegisterClient(telegramID int64, username, firstName, last
 	return client, nil
 }
 
+// GetAllUsers возвращает всех пользователей
+func (s *userService) GetAllUsers() ([]models.User, error) {
+	return s.userRepo.GetAll()
+}
+
+// GetUsersByRole возвращает пользователей по роли
+func (s *userService) GetUsersByRole(role string) ([]models.User, error) {
+	return s.userRepo.GetByRole(role)
+}

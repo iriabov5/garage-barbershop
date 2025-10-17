@@ -8,14 +8,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"garage-barbershop/internal/config"
 	"garage-barbershop/internal/database"
 	"garage-barbershop/internal/handlers"
 	"garage-barbershop/internal/models"
 	"garage-barbershop/internal/repositories"
 	"garage-barbershop/internal/services"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -24,11 +22,11 @@ import (
 // APITestSuite - набор интеграционных тестов
 type APITestSuite struct {
 	suite.Suite
-	db        *database.Database
-	userRepo  repositories.UserRepository
+	db          *database.Database
+	userRepo    repositories.UserRepository
 	userService services.UserService
 	userHandler *handlers.UserHandler
-	server    *httptest.Server
+	server      *httptest.Server
 }
 
 // SetupSuite - настройка перед всеми тестами
@@ -90,15 +88,15 @@ func (suite *APITestSuite) SetupTest() {
 func (suite *APITestSuite) TestGetUsers_Empty() {
 	// Act
 	resp, err := http.Get(suite.server.URL + "/api/users")
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	users := response["users"].([]interface{})
 	suite.Empty(users)
 }
@@ -113,24 +111,24 @@ func (suite *APITestSuite) TestCreateUser_Success() {
 		"last_name":   "Doe",
 		"role":        "client",
 	}
-	
+
 	jsonData, _ := json.Marshal(userData)
-	
+
 	// Act
 	resp, err := http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.Equal(http.StatusCreated, resp.StatusCode)
-	
+
 	var response models.User
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	suite.Equal(int64(12345), response.TelegramID)
 	suite.Equal("testuser", response.Username)
 	suite.Equal("John", response.FirstName)
@@ -149,16 +147,16 @@ func (suite *APITestSuite) TestCreateUser_InvalidData() {
 		"last_name":   "Doe",
 		"role":        "invalid_role", // Неправильная роль
 	}
-	
+
 	jsonData, _ := json.Marshal(userData)
-	
+
 	// Act
 	resp, err := http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.Equal(http.StatusBadRequest, resp.StatusCode)
@@ -175,7 +173,7 @@ func (suite *APITestSuite) TestGetUsers_WithData() {
 		Role:       "barber",
 		IsActive:   true,
 	}
-	
+
 	client := &models.User{
 		TelegramID: 22222,
 		Username:   "client1",
@@ -183,21 +181,21 @@ func (suite *APITestSuite) TestGetUsers_WithData() {
 		LastName:   "Client",
 		Role:       "client",
 	}
-	
+
 	suite.userRepo.Create(barber)
 	suite.userRepo.Create(client)
-	
+
 	// Act
 	resp, err := http.Get(suite.server.URL + "/api/users")
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	users := response["users"].([]interface{})
 	suite.Len(users, 2)
 }
@@ -213,7 +211,7 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 		Role:       "barber",
 		IsActive:   true,
 	}
-	
+
 	client := &models.User{
 		TelegramID: 22222,
 		Username:   "client1",
@@ -221,24 +219,24 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 		LastName:   "Client",
 		Role:       "client",
 	}
-	
+
 	suite.userRepo.Create(barber)
 	suite.userRepo.Create(client)
-	
+
 	// Act - получаем только барберов
 	resp, err := http.Get(suite.server.URL + "/api/users?role=barber")
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	users := response["users"].([]interface{})
 	suite.Len(users, 1)
-	
+
 	// Проверяем, что это барбер
 	user := users[0].(map[string]interface{})
 	suite.Equal("barber", user["role"])
@@ -248,15 +246,15 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 func (suite *APITestSuite) TestAPIStatus() {
 	// Act
 	resp, err := http.Get(suite.server.URL + "/api/status")
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	suite.Equal("ok", response["status"])
 }
 
@@ -264,7 +262,7 @@ func (suite *APITestSuite) TestAPIStatus() {
 func (suite *APITestSuite) TestUserService_RegisterBarber_Integration() {
 	// Act
 	barber, err := suite.userService.RegisterBarber(12345, "barber_user", "Ivan", "Barber")
-	
+
 	// Assert
 	suite.NoError(err)
 	suite.NotNil(barber)
@@ -275,7 +273,7 @@ func (suite *APITestSuite) TestUserService_RegisterBarber_Integration() {
 	suite.Equal("barber", barber.Role)
 	suite.True(barber.IsActive)
 	suite.Equal(5.0, barber.Rating)
-	
+
 	// Проверяем, что барбер сохранился в базе
 	savedBarber, err := suite.userRepo.GetByID(barber.ID)
 	suite.NoError(err)

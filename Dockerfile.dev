@@ -1,0 +1,30 @@
+# Dockerfile для разработки с тестами
+FROM golang:1.21-alpine
+
+# Устанавливаем необходимые пакеты
+RUN apk add --no-cache \
+    git \
+    make \
+    postgresql-client \
+    redis
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем go.mod и go.sum
+COPY go.mod go.sum ./
+
+# Загружаем зависимости
+RUN go mod download
+
+# Копируем исходный код
+COPY . .
+
+# Устанавливаем права на выполнение
+RUN chmod +x /app/main
+
+# Открываем порт
+EXPOSE 8080
+
+# Команда по умолчанию (будет переопределена в docker-compose)
+CMD ["go", "run", "main.go"]

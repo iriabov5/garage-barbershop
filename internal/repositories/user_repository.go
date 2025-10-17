@@ -15,6 +15,8 @@ type UserRepository interface {
 	Delete(id uint) error
 	GetBarbers() ([]models.User, error)
 	GetClients() ([]models.User, error)
+	GetAll() ([]models.User, error)
+	GetByRole(role string) ([]models.User, error)
 }
 
 // userRepository реализация репозитория пользователей
@@ -76,3 +78,16 @@ func (r *userRepository) GetClients() ([]models.User, error) {
 	return clients, err
 }
 
+// GetAll получает всех пользователей
+func (r *userRepository) GetAll() ([]models.User, error) {
+	var users []models.User
+	err := r.db.Find(&users).Error
+	return users, err
+}
+
+// GetByRole получает пользователей по роли
+func (r *userRepository) GetByRole(role string) ([]models.User, error) {
+	var users []models.User
+	err := r.db.Where("role = ?", role).Find(&users).Error
+	return users, err
+}

@@ -8,14 +8,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"garage-barbershop/internal/config"
 	"garage-barbershop/internal/database"
 	"garage-barbershop/internal/handlers"
 	"garage-barbershop/internal/models"
 	"garage-barbershop/internal/repositories"
 	"garage-barbershop/internal/services"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -24,11 +22,11 @@ import (
 // UserJourneyTestSuite - E2E тесты пользовательских сценариев
 type UserJourneyTestSuite struct {
 	suite.Suite
-	db         *database.Database
-	userRepo   repositories.UserRepository
+	db          *database.Database
+	userRepo    repositories.UserRepository
 	userService services.UserService
 	userHandler *handlers.UserHandler
-	server     *httptest.Server
+	server      *httptest.Server
 }
 
 // SetupSuite - настройка перед всеми тестами
@@ -89,7 +87,7 @@ func (suite *UserJourneyTestSuite) SetupTest() {
 // TestCompleteUserJourney - полный пользовательский сценарий
 func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 	// Сценарий: Регистрация барбера → Регистрация клиента → Создание услуги → Запись на услугу
-	
+
 	// 1. Регистрация барбера
 	barberData := map[string]interface{}{
 		"telegram_id": 11111,
@@ -98,23 +96,23 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 		"last_name":   "Barber",
 		"role":        "barber",
 	}
-	
+
 	jsonData, _ := json.Marshal(barberData)
 	resp, err := http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	suite.NoError(err)
 	suite.Equal(http.StatusCreated, resp.StatusCode)
-	
+
 	var barber models.User
 	err = json.NewDecoder(resp.Body).Decode(&barber)
 	suite.NoError(err)
 	suite.Equal("barber", barber.Role)
 	suite.True(barber.IsActive)
-	
+
 	// 2. Регистрация клиента
 	clientData := map[string]interface{}{
 		"telegram_id": 22222,
@@ -123,54 +121,54 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 		"last_name":   "Client",
 		"role":        "client",
 	}
-	
+
 	jsonData, _ = json.Marshal(clientData)
 	resp, err = http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	suite.NoError(err)
 	suite.Equal(http.StatusCreated, resp.StatusCode)
-	
+
 	var client models.User
 	err = json.NewDecoder(resp.Body).Decode(&client)
 	suite.NoError(err)
 	suite.Equal("client", client.Role)
-	
+
 	// 3. Проверяем, что оба пользователя созданы
 	resp, err = http.Get(suite.server.URL + "/api/users")
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	users := response["users"].([]interface{})
 	suite.Len(users, 2)
-	
+
 	// 4. Проверяем фильтрацию по ролям
 	resp, err = http.Get(suite.server.URL + "/api/users?role=barber")
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	barbers := response["users"].([]interface{})
 	suite.Len(barbers, 1)
 	suite.Equal("barber", barbers[0].(map[string]interface{})["role"])
-	
+
 	// 5. Проверяем фильтрацию клиентов
 	resp, err = http.Get(suite.server.URL + "/api/users?role=client")
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)
-	
+
 	clients := response["users"].([]interface{})
 	suite.Len(clients, 1)
 	suite.Equal("client", clients[0].(map[string]interface{})["role"])
@@ -186,21 +184,21 @@ func (suite *UserJourneyTestSuite) TestBarberRegistrationFlow() {
 		"last_name":   "Barber",
 		"role":        "barber",
 	}
-	
+
 	jsonData, _ := json.Marshal(barberData)
 	resp, err := http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	suite.NoError(err)
 	suite.Equal(http.StatusCreated, resp.StatusCode)
-	
+
 	var barber models.User
 	err = json.NewDecoder(resp.Body).Decode(&barber)
 	suite.NoError(err)
-	
+
 	// 2. Проверяем, что барбер создан с правильными параметрами
 	suite.Equal(int64(33333), barber.TelegramID)
 	suite.Equal("master_barber", barber.Username)
@@ -209,13 +207,13 @@ func (suite *UserJourneyTestSuite) TestBarberRegistrationFlow() {
 	suite.Equal("barber", barber.Role)
 	suite.True(barber.IsActive)
 	suite.Equal(5.0, barber.Rating)
-	
+
 	// 3. Проверяем, что барбер сохранился в базе
 	savedBarber, err := suite.userRepo.GetByID(barber.ID)
 	suite.NoError(err)
 	suite.Equal(barber.ID, savedBarber.ID)
 	suite.Equal(barber.TelegramID, savedBarber.TelegramID)
-	
+
 	// 4. Проверяем, что барбер появляется в списке барберов
 	barbers, err := suite.userRepo.GetBarbers()
 	suite.NoError(err)
@@ -233,34 +231,34 @@ func (suite *UserJourneyTestSuite) TestClientRegistrationFlow() {
 		"last_name":   "Client",
 		"role":        "client",
 	}
-	
+
 	jsonData, _ := json.Marshal(clientData)
 	resp, err := http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	suite.NoError(err)
 	suite.Equal(http.StatusCreated, resp.StatusCode)
-	
+
 	var client models.User
 	err = json.NewDecoder(resp.Body).Decode(&client)
 	suite.NoError(err)
-	
+
 	// 2. Проверяем, что клиент создан с правильными параметрами
 	suite.Equal(int64(44444), client.TelegramID)
 	suite.Equal("regular_client", client.Username)
 	suite.Equal("Regular", client.FirstName)
 	suite.Equal("Client", client.LastName)
 	suite.Equal("client", client.Role)
-	
+
 	// 3. Проверяем, что клиент сохранился в базе
 	savedClient, err := suite.userRepo.GetByID(client.ID)
 	suite.NoError(err)
 	suite.Equal(client.ID, savedClient.ID)
 	suite.Equal(client.TelegramID, savedClient.TelegramID)
-	
+
 	// 4. Проверяем, что клиент появляется в списке клиентов
 	clients, err := suite.userRepo.GetClients()
 	suite.NoError(err)
@@ -278,17 +276,17 @@ func (suite *UserJourneyTestSuite) TestErrorHandling() {
 		"last_name":   "User",
 		"role":        "invalid_role", // Неправильная роль
 	}
-	
+
 	jsonData, _ := json.Marshal(invalidData)
 	resp, err := http.Post(
 		suite.server.URL+"/api/users/create",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
-	
+
 	suite.NoError(err)
 	suite.Equal(http.StatusBadRequest, resp.StatusCode)
-	
+
 	// 2. Тест получения несуществующего пользователя
 	resp, err = http.Get(suite.server.URL + "/api/users/99999")
 	suite.NoError(err)
@@ -300,7 +298,7 @@ func (suite *UserJourneyTestSuite) TestAPIStatus() {
 	resp, err := http.Get(suite.server.URL + "/api/status")
 	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	suite.NoError(err)

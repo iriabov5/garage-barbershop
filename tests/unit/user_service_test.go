@@ -54,6 +54,16 @@ func (m *MockUserRepository) GetClients() ([]models.User, error) {
 	return args.Get(0).([]models.User), args.Error(1)
 }
 
+func (m *MockUserRepository) GetAll() ([]models.User, error) {
+	args := m.Called()
+	return args.Get(0).([]models.User), args.Error(1)
+}
+
+func (m *MockUserRepository) GetByRole(role string) ([]models.User, error) {
+	args := m.Called(role)
+	return args.Get(0).([]models.User), args.Error(1)
+}
+
 // TestUserService_CreateUser - тест создания пользователя
 func TestUserService_CreateUser(t *testing.T) {
 	// Arrange
