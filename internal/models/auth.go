@@ -29,6 +29,21 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// DirectLoginRequest представляет запрос на прямую авторизацию
+type DirectLoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+// DirectRegisterRequest представляет запрос на прямую регистрацию
+type DirectRegisterRequest struct {
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=6"`
+	FirstName string `json:"first_name" binding:"required"`
+	LastName  string `json:"last_name" binding:"required"`
+	Role      string `json:"role" binding:"required,oneof=client barber"`
+}
+
 // TokenClaims представляет claims JWT токена
 type TokenClaims struct {
 	UserID     uint   `json:"user_id"`

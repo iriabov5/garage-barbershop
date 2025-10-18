@@ -16,8 +16,8 @@ type UserService interface {
 	GetClients() ([]models.User, error)
 	GetAllUsers() ([]models.User, error)
 	GetUsersByRole(role string) ([]models.User, error)
-	RegisterBarber(telegramID int64, username, firstName, lastName string) (*models.User, error)
-	RegisterClient(telegramID int64, username, firstName, lastName string) (*models.User, error)
+	RegisterBarber(telegramID int64, username, firstName, lastName, email string) (*models.User, error)
+	RegisterClient(telegramID int64, username, firstName, lastName, email string) (*models.User, error)
 }
 
 // userService реализация сервиса пользователей
@@ -68,12 +68,13 @@ func (s *userService) GetClients() ([]models.User, error) {
 }
 
 // RegisterBarber регистрирует нового барбера
-func (s *userService) RegisterBarber(telegramID int64, username, firstName, lastName string) (*models.User, error) {
+func (s *userService) RegisterBarber(telegramID int64, username, firstName, lastName, email string) (*models.User, error) {
 	barber := &models.User{
 		TelegramID: telegramID,
 		Username:   username,
 		FirstName:  firstName,
 		LastName:   lastName,
+		Email:      email,
 		Role:       "barber",
 		IsActive:   true,
 		Rating:     5.0, // Начальный рейтинг
@@ -88,12 +89,13 @@ func (s *userService) RegisterBarber(telegramID int64, username, firstName, last
 }
 
 // RegisterClient регистрирует нового клиента
-func (s *userService) RegisterClient(telegramID int64, username, firstName, lastName string) (*models.User, error) {
+func (s *userService) RegisterClient(telegramID int64, username, firstName, lastName, email string) (*models.User, error) {
 	client := &models.User{
 		TelegramID: telegramID,
 		Username:   username,
 		FirstName:  firstName,
 		LastName:   lastName,
+		Email:      email,
 		Role:       "client",
 	}
 

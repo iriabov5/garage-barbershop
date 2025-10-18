@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthService интерфейс для аутентификации
@@ -26,6 +27,12 @@ type AuthService interface {
 	IsRefreshTokenValid(userID uint, refreshToken string) bool
 	UpdateRefreshToken(userID uint, oldToken, newToken string) error
 	RevokeRefreshToken(userID uint) error
+	
+	// Прямая авторизация (без Telegram)
+	RegisterUserDirect(req models.DirectRegisterRequest) (*models.User, error)
+	LoginDirect(req models.DirectLoginRequest) (*models.User, error)
+	HashPassword(password string) (string, error)
+	CheckPassword(password, hash string) bool
 }
 
 // authService реализация AuthService
@@ -222,4 +229,75 @@ func (s *authService) RevokeRefreshToken(userID uint) error {
 // generateJTI генерирует уникальный JWT ID
 func generateJTI() string {
 	return fmt.Sprintf("%d_%d", time.Now().UnixNano(), time.Now().Unix())
+}
+
+// HashPassword хеширует пароль с помощью bcrypt
+func (s *authService) HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+// CheckPassword проверяет пароль против хеша
+func (s *authService) CheckPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+// RegisterUserDirect регистрирует пользователя напрямую (без Telegram)
+func (s *authService) RegisterUserDirect(req models.DirectRegisterRequest) (*models.User, error) {
+	// Проверяем, что email не занят
+	existingUser, err := s.userRepo.GetByEmail(req.Email)
+	if err == nil && existingUser != nil {
+		return nil, fmt.Errorf("пользователь с email %s уже существует", req.Email)
+	}
+
+	// Хешируем пароль
+	passwordHash, err := s.HashPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка хеширования пароля: %v", err)
+	}
+
+	// Создаем пользователя
+	user := &models.User{
+		Email:        req.Email,
+		PasswordHash: passwordHash,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Role:         req.Role,
+		AuthMethod:   "direct",
+		IsActive:     true,
+	}
+
+	// Сохраняем в БД
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, fmt.Errorf("ошибка создания пользователя: %v", err)
+	}
+
+	return user, nil
+}
+
+// LoginDirect авторизует пользователя напрямую (без Telegram)
+func (s *authService) LoginDirect(req models.DirectLoginRequest) (*models.User, error) {
+	// Находим пользователя по email
+	user, err := s.userRepo.GetByEmail(req.Email)
+	if err != nil {
+		return nil, fmt.Errorf("пользователь не найден")
+	}
+
+	// Проверяем, что это прямая авторизация
+	if user.AuthMethod != "direct" {
+		return nil, fmt.Errorf("этот пользователь авторизуется через Telegram")
+	}
+
+	// Проверяем пароль
+	if !s.CheckPassword(req.Password, user.PasswordHash) {
+		return nil, fmt.Errorf("неверный пароль")
+	}
+
+	// Проверяем, что пользователь активен
+	if !user.IsActive {
+		return nil, fmt.Errorf("пользователь деактивирован")
+	}
+
+	return user, nil
 }

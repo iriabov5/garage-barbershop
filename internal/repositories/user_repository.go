@@ -11,6 +11,7 @@ type UserRepository interface {
 	Create(user *models.User) error
 	GetByID(id uint) (*models.User, error)
 	GetByTelegramID(telegramID int64) (*models.User, error)
+	GetByEmail(email string) (*models.User, error)
 	Update(user *models.User) error
 	Delete(id uint) error
 	GetBarbers() ([]models.User, error)
@@ -48,6 +49,16 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 func (r *userRepository) GetByTelegramID(telegramID int64) (*models.User, error) {
 	var user models.User
 	err := r.db.Where("telegram_id = ?", telegramID).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetByEmail получает пользователя по email
+func (r *userRepository) GetByEmail(email string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

@@ -71,6 +71,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		Username   string `json:"username"`
 		FirstName  string `json:"first_name"`
 		LastName   string `json:"last_name"`
+		Email      string `json:"email"`
 		Role       string `json:"role"`
 	}
 
@@ -85,11 +86,11 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	switch user.Role {
 	case "barber":
 		createdUser, err = h.userService.RegisterBarber(
-			user.TelegramID, user.Username, user.FirstName, user.LastName,
+			user.TelegramID, user.Username, user.FirstName, user.LastName, user.Email,
 		)
 	case "client":
 		createdUser, err = h.userService.RegisterClient(
-			user.TelegramID, user.Username, user.FirstName, user.LastName,
+			user.TelegramID, user.Username, user.FirstName, user.LastName, user.Email,
 		)
 	default:
 		http.Error(w, "Invalid role", http.StatusBadRequest)

@@ -192,3 +192,99 @@ func (h *AuthHTTPHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(profile)
 }
+
+// RegisterDirect обрабатывает прямую регистрацию пользователя
+func (h *AuthHTTPHandler) RegisterDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.DirectRegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Неверные данные: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Регистрируем пользователя
+	user, err := h.authService.RegisterUserDirect(req)
+	if err != nil {
+		http.Error(w, "Ошибка регистрации: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Генерируем токены
+	accessToken, err := h.authService.GenerateAccessToken(user)
+	if err != nil {
+		http.Error(w, "Ошибка генерации access token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.authService.GenerateRefreshToken(user)
+	if err != nil {
+		http.Error(w, "Ошибка генерации refresh token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Сохраняем refresh token
+	if err := h.authService.StoreRefreshToken(user.ID, refreshToken); err != nil {
+		http.Error(w, "Ошибка сохранения refresh token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    900, // 15 минут
+		User:         *user,
+	})
+}
+
+// LoginDirect обрабатывает прямую авторизацию пользователя
+func (h *AuthHTTPHandler) LoginDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не разрешен", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.DirectLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Неверные данные: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Авторизуем пользователя
+	user, err := h.authService.LoginDirect(req)
+	if err != nil {
+		http.Error(w, "Ошибка авторизации: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Генерируем токены
+	accessToken, err := h.authService.GenerateAccessToken(user)
+	if err != nil {
+		http.Error(w, "Ошибка генерации access token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.authService.GenerateRefreshToken(user)
+	if err != nil {
+		http.Error(w, "Ошибка генерации refresh token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Сохраняем refresh token
+	if err := h.authService.StoreRefreshToken(user.ID, refreshToken); err != nil {
+		http.Error(w, "Ошибка сохранения refresh token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    900, // 15 минут
+		User:         *user,
+	})
+}

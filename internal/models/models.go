@@ -19,7 +19,11 @@ type User struct {
 	FirstName  string `json:"first_name"`
 	LastName   string `json:"last_name"`
 	Phone      string `json:"phone"`
-	Email      string `json:"email"`
+	Email      string `json:"email" gorm:"uniqueIndex"`
+	
+	// Прямая авторизация (без Telegram)
+	PasswordHash string `json:"-" gorm:"column:password_hash"` // хеш пароля (не возвращаем в JSON)
+	AuthMethod   string `json:"auth_method"`                   // "telegram" или "direct"
 
 	// Роль пользователя
 	Role string `json:"role"` // "barber" или "client"

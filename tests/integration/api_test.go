@@ -170,6 +170,7 @@ func (suite *APITestSuite) TestGetUsers_WithData() {
 		Username:   "barber1",
 		FirstName:  "Ivan",
 		LastName:   "Barber",
+		Email:      "barber1@example.com",
 		Role:       "barber",
 		IsActive:   true,
 	}
@@ -179,6 +180,7 @@ func (suite *APITestSuite) TestGetUsers_WithData() {
 		Username:   "client1",
 		FirstName:  "Jane",
 		LastName:   "Client",
+		Email:      "client1@example.com",
 		Role:       "client",
 	}
 
@@ -208,6 +210,7 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 		Username:   "barber1",
 		FirstName:  "Ivan",
 		LastName:   "Barber",
+		Email:      "barber1@example.com",
 		Role:       "barber",
 		IsActive:   true,
 	}
@@ -217,6 +220,7 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 		Username:   "client1",
 		FirstName:  "Jane",
 		LastName:   "Client",
+		Email:      "client1@example.com",
 		Role:       "client",
 	}
 
@@ -261,7 +265,7 @@ func (suite *APITestSuite) TestAPIStatus() {
 // TestUserService_RegisterBarber_Integration - интеграционный тест регистрации барбера
 func (suite *APITestSuite) TestUserService_RegisterBarber_Integration() {
 	// Act
-	barber, err := suite.userService.RegisterBarber(12345, "barber_user", "Ivan", "Barber")
+	barber, err := suite.userService.RegisterBarber(12345, "barber_user", "Ivan", "Barber", "barber@example.com")
 
 	// Assert
 	suite.NoError(err)

@@ -72,12 +72,13 @@ func TestUserService_RegisterBarber(t *testing.T) {
 	username := "barber_user"
 	firstName := "Ivan"
 	lastName := "Barber"
+	email := "barber@example.com"
 
 	// Настраиваем мок
 	mockRepo.On("Create", mock.AnythingOfType("*models.User")).Return(nil)
 
 	// Act
-	barber, err := userService.RegisterBarber(telegramID, username, firstName, lastName)
+	barber, err := userService.RegisterBarber(telegramID, username, firstName, lastName, email)
 
 	// Assert
 	assert.NoError(t, err)
@@ -102,12 +103,13 @@ func TestUserService_RegisterClient(t *testing.T) {
 	username := "client_user"
 	firstName := "Jane"
 	lastName := "Client"
+	email := "client@example.com"
 
 	// Настраиваем мок
 	mockRepo.On("Create", mock.AnythingOfType("*models.User")).Return(nil)
 
 	// Act
-	client, err := userService.RegisterClient(telegramID, username, firstName, lastName)
+	client, err := userService.RegisterClient(telegramID, username, firstName, lastName, email)
 
 	// Assert
 	assert.NoError(t, err)

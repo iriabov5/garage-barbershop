@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -338,4 +339,24 @@ func (s *TestAuthService) UpdateRefreshToken(userID uint, oldToken, newToken str
 // RevokeRefreshToken отзывает refresh token (для тестов не реализовано)
 func (s *TestAuthService) RevokeRefreshToken(userID uint) error {
 	return nil
+}
+
+// HashPassword хеширует пароль (для тестов не реализовано)
+func (s *TestAuthService) HashPassword(password string) (string, error) {
+	return "hashed_" + password, nil
+}
+
+// CheckPassword проверяет пароль (для тестов не реализовано)
+func (s *TestAuthService) CheckPassword(password, hash string) bool {
+	return hash == "hashed_"+password
+}
+
+// RegisterUserDirect регистрирует пользователя (для тестов не реализовано)
+func (s *TestAuthService) RegisterUserDirect(req models.DirectRegisterRequest) (*models.User, error) {
+	return nil, fmt.Errorf("не реализовано в тестах")
+}
+
+// LoginDirect авторизует пользователя (для тестов не реализовано)
+func (s *TestAuthService) LoginDirect(req models.DirectLoginRequest) (*models.User, error) {
+	return nil, fmt.Errorf("не реализовано в тестах")
 }

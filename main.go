@@ -124,6 +124,8 @@ func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers
 	// Публичные маршруты (не требуют аутентификации)
 	http.HandleFunc("/api/auth/telegram", authHTTPHandler.TelegramAuth)
 	http.HandleFunc("/api/auth/refresh", authHTTPHandler.RefreshToken)
+	http.HandleFunc("/api/auth/register", authHTTPHandler.RegisterDirect)
+	http.HandleFunc("/api/auth/login", authHTTPHandler.LoginDirect)
 
 	// Защищенные маршруты (требуют JWT токен)
 	http.HandleFunc("/api/auth/logout", authHTTPHandler.Logout)

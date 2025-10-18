@@ -94,6 +94,7 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 		"username":    "ivan_barber",
 		"first_name":  "Ivan",
 		"last_name":   "Barber",
+		"email":       "ivan_barber@example.com",
 		"role":        "barber",
 	}
 
@@ -119,6 +120,7 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 		"username":    "jane_client",
 		"first_name":  "Jane",
 		"last_name":   "Client",
+		"email":       "jane_client@example.com",
 		"role":        "client",
 	}
 
