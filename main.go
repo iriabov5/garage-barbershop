@@ -108,16 +108,28 @@ func setupDependencies() {
 	// Создаем сервисы
 	userService := services.NewUserService(userRepo)
 
+	// Создаем сервис аутентификации
+	authService := services.NewAuthService(userRepo, rdb, cfg.JWTSecret, cfg.TelegramBotToken)
+
 	// Создаем хендлеры
 	userHandler := handlers.NewUserHandler(userService)
+	authHTTPHandler := handlers.NewAuthHTTPHandler(authService)
 
 	// Настраиваем API routes
-	setupAPIRoutes(userHandler)
+	setupAPIRoutes(userHandler, authHTTPHandler)
 }
 
 // Настройка API маршрутов
-func setupAPIRoutes(userHandler *handlers.UserHandler) {
-	// API для пользователей
+func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler) {
+	// Публичные маршруты (не требуют аутентификации)
+	http.HandleFunc("/api/auth/telegram", authHTTPHandler.TelegramAuth)
+	http.HandleFunc("/api/auth/refresh", authHTTPHandler.RefreshToken)
+
+	// Защищенные маршруты (требуют JWT токен)
+	http.HandleFunc("/api/auth/logout", authHTTPHandler.Logout)
+	http.HandleFunc("/api/auth/profile", authHTTPHandler.GetProfile)
+
+	// API для пользователей (защищенные)
 	http.HandleFunc("/api/users", userHandler.GetUsers)
 	http.HandleFunc("/api/users/", userHandler.GetUser)
 	http.HandleFunc("/api/users/create", userHandler.CreateUser)
