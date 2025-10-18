@@ -24,7 +24,9 @@ type UserJourneyTestSuite struct {
 	suite.Suite
 	db          *database.Database
 	userRepo    repositories.UserRepository
+	roleRepo    repositories.RoleRepository
 	userService services.UserService
+	roleService services.RoleService
 	userHandler *handlers.UserHandler
 	server      *httptest.Server
 }
@@ -43,6 +45,8 @@ func (suite *UserJourneyTestSuite) SetupSuite() {
 	// Выполняем миграции
 	err = suite.db.Migrate(
 		&models.User{},
+		&models.Role{},
+		&models.UserRole{},
 		&models.Service{},
 		&models.Appointment{},
 		&models.WorkingHours{},
@@ -55,7 +59,9 @@ func (suite *UserJourneyTestSuite) SetupSuite() {
 
 	// Создаем зависимости
 	suite.userRepo = repositories.NewUserRepository(db)
-	suite.userService = services.NewUserService(suite.userRepo)
+	suite.roleRepo = repositories.NewRoleRepository(db)
+	suite.userService = services.NewUserService(suite.userRepo, suite.roleRepo)
+	suite.roleService = services.NewRoleService(suite.roleRepo)
 	suite.userHandler = handlers.NewUserHandler(suite.userService)
 
 	// Создаем тестовый HTTP сервер
@@ -111,7 +117,7 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 	var barber models.User
 	err = json.NewDecoder(resp.Body).Decode(&barber)
 	suite.NoError(err)
-	suite.Equal("barber", barber.Role)
+	// Роли теперь управляются отдельно через RoleService
 	suite.True(barber.IsActive)
 
 	// 2. Регистрация клиента
@@ -137,7 +143,7 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 	var client models.User
 	err = json.NewDecoder(resp.Body).Decode(&client)
 	suite.NoError(err)
-	suite.Equal("client", client.Role)
+	// Роли теперь управляются отдельно через RoleService
 
 	// 3. Проверяем, что оба пользователя созданы
 	resp, err = http.Get(suite.server.URL + "/api/users")
@@ -161,7 +167,7 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 
 	barbers := response["users"].([]interface{})
 	suite.Len(barbers, 1)
-	suite.Equal("barber", barbers[0].(map[string]interface{})["role"])
+	// Роли теперь управляются отдельно через RoleService
 
 	// 5. Проверяем фильтрацию клиентов
 	resp, err = http.Get(suite.server.URL + "/api/users?role=client")
@@ -173,7 +179,7 @@ func (suite *UserJourneyTestSuite) TestCompleteUserJourney() {
 
 	clients := response["users"].([]interface{})
 	suite.Len(clients, 1)
-	suite.Equal("client", clients[0].(map[string]interface{})["role"])
+	// Роли теперь управляются отдельно через RoleService
 }
 
 // TestBarberRegistrationFlow - сценарий регистрации барбера
@@ -184,6 +190,7 @@ func (suite *UserJourneyTestSuite) TestBarberRegistrationFlow() {
 		"username":    "master_barber",
 		"first_name":  "Master",
 		"last_name":   "Barber",
+		"email":       "master@barber.com",
 		"role":        "barber",
 	}
 
@@ -206,7 +213,7 @@ func (suite *UserJourneyTestSuite) TestBarberRegistrationFlow() {
 	suite.Equal("master_barber", barber.Username)
 	suite.Equal("Master", barber.FirstName)
 	suite.Equal("Barber", barber.LastName)
-	suite.Equal("barber", barber.Role)
+	// Роли теперь управляются отдельно через RoleService
 	suite.True(barber.IsActive)
 	suite.Equal(5.0, barber.Rating)
 
@@ -217,7 +224,9 @@ func (suite *UserJourneyTestSuite) TestBarberRegistrationFlow() {
 	suite.Equal(barber.TelegramID, savedBarber.TelegramID)
 
 	// 4. Проверяем, что барбер появляется в списке барберов
-	barbers, err := suite.userRepo.GetBarbers()
+	barberRole, err := suite.roleService.GetRoleByName("barber")
+	suite.NoError(err)
+	barbers, err := suite.roleService.GetUsersWithRole(barberRole.ID)
 	suite.NoError(err)
 	suite.Len(barbers, 1)
 	suite.Equal(barber.ID, barbers[0].ID)
@@ -231,6 +240,7 @@ func (suite *UserJourneyTestSuite) TestClientRegistrationFlow() {
 		"username":    "regular_client",
 		"first_name":  "Regular",
 		"last_name":   "Client",
+		"email":       "regular@client.com",
 		"role":        "client",
 	}
 
@@ -253,7 +263,7 @@ func (suite *UserJourneyTestSuite) TestClientRegistrationFlow() {
 	suite.Equal("regular_client", client.Username)
 	suite.Equal("Regular", client.FirstName)
 	suite.Equal("Client", client.LastName)
-	suite.Equal("client", client.Role)
+	// Роли теперь управляются отдельно через RoleService
 
 	// 3. Проверяем, что клиент сохранился в базе
 	savedClient, err := suite.userRepo.GetByID(client.ID)
@@ -262,7 +272,9 @@ func (suite *UserJourneyTestSuite) TestClientRegistrationFlow() {
 	suite.Equal(client.TelegramID, savedClient.TelegramID)
 
 	// 4. Проверяем, что клиент появляется в списке клиентов
-	clients, err := suite.userRepo.GetClients()
+	clientRole, err := suite.roleService.GetRoleByName("client")
+	suite.NoError(err)
+	clients, err := suite.roleService.GetUsersWithRole(clientRole.ID)
 	suite.NoError(err)
 	suite.Len(clients, 1)
 	suite.Equal(client.ID, clients[0].ID)

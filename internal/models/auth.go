@@ -83,13 +83,13 @@ type BarberSelfUpdateRequest struct {
 
 // TokenClaims представляет claims JWT токена
 type TokenClaims struct {
-	UserID     uint   `json:"user_id"`
-	TelegramID int64  `json:"telegram_id"`
-	Role       string `json:"role"`
-	Type       string `json:"type"`
-	Exp        int64  `json:"exp"`
-	Iat        int64  `json:"iat"`
-	Jti        string `json:"jti"`
+	UserID     uint     `json:"user_id"`
+	TelegramID int64    `json:"telegram_id"`
+	Roles      []string `json:"roles"`
+	Type       string   `json:"type"`
+	Exp        int64    `json:"exp"`
+	Iat        int64    `json:"iat"`
+	Jti        string   `json:"jti"`
 	jwt.RegisteredClaims
 }
 

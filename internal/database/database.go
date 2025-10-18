@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 
+	"garage-barbershop/internal/migrations"
+	"garage-barbershop/internal/models"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -41,14 +44,35 @@ func NewDatabase(databaseURL string) (*Database, error) {
 }
 
 // Migrate выполняет миграции базы данных
-func (d *Database) Migrate(models ...interface{}) error {
+func (d *Database) Migrate(modelList ...interface{}) error {
 	if d.DB == nil {
 		return fmt.Errorf("база данных не инициализирована")
 	}
 
-	err := d.DB.AutoMigrate(models...)
+	err := d.DB.AutoMigrate(modelList...)
 	if err != nil {
 		return fmt.Errorf("ошибка миграции: %v", err)
+	}
+
+	// Создаем начальные роли, если переданы модели ролей
+	hasRoleModel := false
+	for _, model := range modelList {
+		if _, ok := model.(*models.Role); ok {
+			hasRoleModel = true
+			break
+		}
+	}
+
+	if hasRoleModel {
+		if err := CreateInitialRoles(d.DB); err != nil {
+			return fmt.Errorf("ошибка создания начальных ролей: %v", err)
+		}
+		log.Println("✅ Начальные роли созданы успешно")
+
+		// Мигрируем роли существующих пользователей
+		if err := migrations.MigrateExistingUserRoles(d.DB); err != nil {
+			return fmt.Errorf("ошибка миграции ролей существующих пользователей: %v", err)
+		}
 	}
 
 	log.Println("✅ Миграция базы данных выполнена успешно")
@@ -67,4 +91,50 @@ func (d *Database) Close() error {
 	}
 
 	return sqlDB.Close()
+}
+
+// CreateInitialRoles создает начальные роли в системе
+func CreateInitialRoles(db *gorm.DB) error {
+	// Создаем роли, если они не существуют
+	roles := []models.Role{
+		{
+			Name:        "admin",
+			DisplayName: "Администратор",
+			Description: "Полный доступ к системе",
+			IsActive:    true,
+			Permissions: `{"users": ["create", "read", "update", "delete"], "barbers": ["create", "read", "update", "delete"], "appointments": ["create", "read", "update", "delete"]}`,
+		},
+		{
+			Name:        "barber",
+			DisplayName: "Барбер",
+			Description: "Управление записями и профилем",
+			IsActive:    true,
+			Permissions: `{"appointments": ["create", "read", "update"], "profile": ["read", "update"]}`,
+		},
+		{
+			Name:        "client",
+			DisplayName: "Клиент",
+			Description: "Запись на услуги",
+			IsActive:    true,
+			Permissions: `{"appointments": ["create", "read"], "profile": ["read", "update"]}`,
+		},
+	}
+
+	for _, role := range roles {
+		// Проверяем, существует ли роль
+		var existingRole models.Role
+		err := db.Where("name = ?", role.Name).First(&existingRole).Error
+		if err == gorm.ErrRecordNotFound {
+			// Роль не существует, создаем
+			if err := db.Create(&role).Error; err != nil {
+				return err
+			}
+		} else if err != nil {
+			// Другая ошибка
+			return err
+		}
+		// Роль уже существует, пропускаем
+	}
+
+	return nil
 }

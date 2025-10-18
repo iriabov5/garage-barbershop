@@ -55,7 +55,7 @@ func JWTMiddleware(authService services.AuthService) gin.HandlerFunc {
 		// Сохраняем данные пользователя в контекст
 		c.Set("user_id", claims.UserID)
 		c.Set("telegram_id", claims.TelegramID)
-		c.Set("user_role", claims.Role)
+		c.Set("user_roles", claims.Roles)
 		c.Set("jwt_claims", claims)
 
 		c.Next()
@@ -65,7 +65,7 @@ func JWTMiddleware(authService services.AuthService) gin.HandlerFunc {
 // RequireRole middleware для проверки роли пользователя
 func RequireRole(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole, exists := c.Get("user_role")
+		userRole, exists := c.Get("user_roles")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Роль пользователя не найдена"})
 			c.Abort()
@@ -85,7 +85,7 @@ func RequireRole(requiredRole string) gin.HandlerFunc {
 // RequireAnyRole middleware для проверки любой из ролей
 func RequireAnyRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole, exists := c.Get("user_role")
+		userRole, exists := c.Get("user_roles")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Роль пользователя не найдена"})
 			c.Abort()
@@ -130,7 +130,7 @@ func OptionalAuth(authService services.AuthService) gin.HandlerFunc {
 		if claims.IsAccessToken() && !claims.IsExpired() {
 			c.Set("user_id", claims.UserID)
 			c.Set("telegram_id", claims.TelegramID)
-			c.Set("user_role", claims.Role)
+			c.Set("user_roles", claims.Roles)
 			c.Set("jwt_claims", claims)
 		}
 

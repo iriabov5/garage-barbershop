@@ -118,11 +118,11 @@ func (h *AuthHTTPHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем пользователя (в реальном приложении нужно получить из БД)
-	user := &models.User{
-		ID:         claims.UserID,
-		TelegramID: claims.TelegramID,
-		Role:       claims.Role,
+	// Получаем пользователя из БД
+	user, err := h.authService.GetUserByID(claims.UserID)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
 	}
 
 	// Генерируем новую пару токенов

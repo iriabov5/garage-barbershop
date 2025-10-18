@@ -105,28 +105,29 @@ func setupDependencies() {
 
 	// Создаем репозитории
 	userRepo := repositories.NewUserRepository(db.DB)
+	roleRepo := repositories.NewRoleRepository(db.DB)
 
 	// Создаем сервисы
-	userService := services.NewUserService(userRepo)
+	userService := services.NewUserService(userRepo, roleRepo)
 
 	// Создаем сервис аутентификации
-	authService := services.NewAuthService(userRepo, rdb, cfg.JWTSecret, cfg.TelegramBotToken)
+	authService := services.NewAuthService(userRepo, roleRepo, rdb, cfg.JWTSecret, cfg.TelegramBotToken)
 
 	// Создаем хендлеры
 	userHandler := handlers.NewUserHandler(userService)
 	authHTTPHandler := handlers.NewAuthHTTPHandler(authService)
 
 	// Настраиваем API routes
-	setupAPIRoutes(userHandler, authHTTPHandler, authService, userRepo)
+	setupAPIRoutes(userHandler, authHTTPHandler, authService, userRepo, roleRepo)
 }
 
 // Настройка API маршрутов
-func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler, authService services.AuthService, userRepo repositories.UserRepository) {
+func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler, authService services.AuthService, userRepo repositories.UserRepository, roleRepo repositories.RoleRepository) {
 	// Создаем handler для ролевой авторизации
 	authRolesHandler := handlers.NewAuthRolesHandler(authService)
 
 	// Создаем сервис для барберов
-	barberService := services.NewBarberService(userRepo)
+	barberService := services.NewBarberService(userRepo, roleRepo)
 	barberHandler := handlers.NewBarberHandler(barberService)
 
 	// Публичные маршруты (не требуют аутентификации)

@@ -40,7 +40,7 @@ func HTTPAuthMiddleware(authService services.AuthService) func(next http.Handler
 			// Добавляем данные пользователя в контекст запроса
 			ctx := context.WithValue(r.Context(), "userID", claims.UserID)
 			ctx = context.WithValue(ctx, "telegramID", claims.TelegramID)
-			ctx = context.WithValue(ctx, "userRole", claims.Role)
+			ctx = context.WithValue(ctx, "userRoles", claims.Roles)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	}
@@ -50,8 +50,8 @@ func HTTPAuthMiddleware(authService services.AuthService) func(next http.Handler
 func HTTPRequireRoleMiddleware(requiredRole string) func(next http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			userRole, ok := r.Context().Value("userRole").(string)
-			if !ok || userRole != requiredRole {
+			userRoles, ok := r.Context().Value("userRoles").(string)
+			if !ok || userRoles != requiredRole {
 				http.Error(w, "Недостаточно прав", http.StatusForbidden)
 				return
 			}
@@ -64,7 +64,7 @@ func HTTPRequireRoleMiddleware(requiredRole string) func(next http.HandlerFunc) 
 func HTTPRequireAnyRoleMiddleware(roles ...string) func(next http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			userRole, ok := r.Context().Value("userRole").(string)
+			userRoles, ok := r.Context().Value("userRoles").(string)
 			if !ok {
 				http.Error(w, "Роль пользователя не найдена", http.StatusUnauthorized)
 				return
@@ -72,7 +72,7 @@ func HTTPRequireAnyRoleMiddleware(roles ...string) func(next http.HandlerFunc) h
 
 			hasRole := false
 			for _, role := range roles {
-				if userRole == role {
+				if userRoles == role {
 					hasRole = true
 					break
 				}

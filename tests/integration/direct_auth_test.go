@@ -38,14 +38,15 @@ func (suite *DirectAuthTestSuite) SetupSuite() {
 	testDB := &database.Database{DB: db}
 
 	// Выполняем миграции
-	err = testDB.Migrate(&models.User{})
+	err = testDB.Migrate(&models.User{}, &models.Role{}, &models.UserRole{})
 	suite.Require().NoError(err)
 
 	suite.db = testDB
 
 	// Создаем сервисы (Redis = nil для упрощения)
 	userRepo := repositories.NewUserRepository(suite.db.DB)
-	suite.authService = services.NewAuthService(userRepo, nil, "test_secret", "test_bot_token")
+	roleRepo := repositories.NewRoleRepository(suite.db.DB)
+	suite.authService = services.NewAuthService(userRepo, roleRepo, nil, "test_secret", "test_bot_token")
 	suite.authHandler = handlers.NewAuthHTTPHandler(suite.authService)
 
 	// Настраиваем Gin роутер
@@ -111,7 +112,7 @@ func (suite *DirectAuthTestSuite) TestDirectRegister_Success() {
 	suite.Equal("test@example.com", authResponse.User.Email)
 	suite.Equal("John", authResponse.User.FirstName)
 	suite.Equal("Doe", authResponse.User.LastName)
-	suite.Equal("client", authResponse.User.Role)
+	// Роли теперь проверяются через RoleService
 	suite.Equal("direct", authResponse.User.AuthMethod)
 	suite.True(authResponse.User.IsActive)
 
@@ -130,7 +131,6 @@ func (suite *DirectAuthTestSuite) TestDirectRegister_DuplicateEmail() {
 		Email:      "existing@example.com",
 		FirstName:  "Existing",
 		LastName:   "User",
-		Role:       "client",
 		AuthMethod: "direct",
 		IsActive:   true,
 	}
@@ -143,7 +143,6 @@ func (suite *DirectAuthTestSuite) TestDirectRegister_DuplicateEmail() {
 		Password:  "password123",
 		FirstName: "New",
 		LastName:  "User",
-		Role:      "client",
 	}
 
 	jsonData, err := json.Marshal(registerData)
@@ -167,7 +166,6 @@ func (suite *DirectAuthTestSuite) TestDirectLogin_Success() {
 		Email:      "login@example.com",
 		FirstName:  "Login",
 		LastName:   "User",
-		Role:       "barber",
 		AuthMethod: "direct",
 		IsActive:   true,
 	}
@@ -211,7 +209,7 @@ func (suite *DirectAuthTestSuite) TestDirectLogin_Success() {
 	suite.Equal("login@example.com", authResponse.User.Email)
 	suite.Equal("Login", authResponse.User.FirstName)
 	suite.Equal("User", authResponse.User.LastName)
-	suite.Equal("barber", authResponse.User.Role)
+	// Роли теперь проверяются через RoleService
 	suite.Equal("direct", authResponse.User.AuthMethod)
 }
 
@@ -222,7 +220,6 @@ func (suite *DirectAuthTestSuite) TestDirectLogin_WrongPassword() {
 		Email:      "wrongpass@example.com",
 		FirstName:  "Wrong",
 		LastName:   "Password",
-		Role:       "client",
 		AuthMethod: "direct",
 		IsActive:   true,
 	}

@@ -24,6 +24,7 @@ type APITestSuite struct {
 	suite.Suite
 	db          *database.Database
 	userRepo    repositories.UserRepository
+	roleRepo    repositories.RoleRepository
 	userService services.UserService
 	userHandler *handlers.UserHandler
 	server      *httptest.Server
@@ -43,6 +44,8 @@ func (suite *APITestSuite) SetupSuite() {
 	// Выполняем миграции
 	err = suite.db.Migrate(
 		&models.User{},
+		&models.Role{},
+		&models.UserRole{},
 		&models.Service{},
 		&models.Appointment{},
 		&models.WorkingHours{},
@@ -55,7 +58,8 @@ func (suite *APITestSuite) SetupSuite() {
 
 	// Создаем зависимости
 	suite.userRepo = repositories.NewUserRepository(db)
-	suite.userService = services.NewUserService(suite.userRepo)
+	suite.roleRepo = repositories.NewRoleRepository(db)
+	suite.userService = services.NewUserService(suite.userRepo, suite.roleRepo)
 	suite.userHandler = handlers.NewUserHandler(suite.userService)
 
 	// Создаем тестовый HTTP сервер
@@ -133,7 +137,7 @@ func (suite *APITestSuite) TestCreateUser_Success() {
 	suite.Equal("testuser", response.Username)
 	suite.Equal("John", response.FirstName)
 	suite.Equal("Doe", response.LastName)
-	suite.Equal("client", response.Role)
+	// Роли теперь проверяются через RoleService
 	suite.NotZero(response.ID)
 }
 
@@ -171,7 +175,6 @@ func (suite *APITestSuite) TestGetUsers_WithData() {
 		FirstName:  "Ivan",
 		LastName:   "Barber",
 		Email:      "barber1@example.com",
-		Role:       "barber",
 		IsActive:   true,
 	}
 
@@ -181,7 +184,6 @@ func (suite *APITestSuite) TestGetUsers_WithData() {
 		FirstName:  "Jane",
 		LastName:   "Client",
 		Email:      "client1@example.com",
-		Role:       "client",
 	}
 
 	suite.userRepo.Create(barber)
@@ -211,7 +213,6 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 		FirstName:  "Ivan",
 		LastName:   "Barber",
 		Email:      "barber1@example.com",
-		Role:       "barber",
 		IsActive:   true,
 	}
 
@@ -221,17 +222,32 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 		FirstName:  "Jane",
 		LastName:   "Client",
 		Email:      "client1@example.com",
-		Role:       "client",
+		IsActive:   true,
 	}
 
-	suite.userRepo.Create(barber)
-	suite.userRepo.Create(client)
+	// Создаем пользователей
+	err := suite.db.DB.Create(barber).Error
+	suite.Require().NoError(err)
+	err = suite.db.DB.Create(client).Error
+	suite.Require().NoError(err)
 
-	// Act - получаем только барберов
+	// Назначаем роли (используем существующие роли из миграции)
+	barberRole, err := suite.roleRepo.GetRoleByName("barber")
+	suite.Require().NoError(err)
+	clientRole, err := suite.roleRepo.GetRoleByName("client")
+	suite.Require().NoError(err)
+
+	err = suite.roleRepo.AssignRoleToUser(barber.ID, barberRole.ID, barber.ID)
+	suite.Require().NoError(err)
+	err = suite.roleRepo.AssignRoleToUser(client.ID, clientRole.ID, client.ID)
+	suite.Require().NoError(err)
+
+	// Act - запрашиваем пользователей с ролью "barber"
 	resp, err := http.Get(suite.server.URL + "/api/users?role=barber")
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
 
 	// Assert
-	suite.NoError(err)
 	suite.Equal(http.StatusOK, resp.StatusCode)
 
 	var response map[string]interface{}
@@ -241,9 +257,10 @@ func (suite *APITestSuite) TestGetUsers_ByRole() {
 	users := response["users"].([]interface{})
 	suite.Len(users, 1)
 
-	// Проверяем, что это барбер
-	user := users[0].(map[string]interface{})
-	suite.Equal("barber", user["role"])
+	// Проверяем, что вернулся только барбер
+	userData := users[0].(map[string]interface{})
+	suite.Equal("Ivan", userData["first_name"])
+	suite.Equal("Barber", userData["last_name"])
 }
 
 // TestAPIStatus - тест статуса API
@@ -274,7 +291,7 @@ func (suite *APITestSuite) TestUserService_RegisterBarber_Integration() {
 	suite.Equal("barber_user", barber.Username)
 	suite.Equal("Ivan", barber.FirstName)
 	suite.Equal("Barber", barber.LastName)
-	suite.Equal("barber", barber.Role)
+	// Роли теперь проверяются через RoleService
 	suite.True(barber.IsActive)
 	suite.Equal(5.0, barber.Rating)
 

@@ -25,8 +25,8 @@ type User struct {
 	PasswordHash string `json:"-" gorm:"column:password_hash"` // хеш пароля (не возвращаем в JSON)
 	AuthMethod   string `json:"auth_method"`                   // "telegram" или "direct"
 
-	// Роль пользователя
-	Role string `json:"role"` // "admin", "barber" или "client"
+	// Роли пользователя (many-to-many через UserRole)
+	Roles []Role `json:"roles" gorm:"many2many:user_roles;"`
 
 	// Для барбера
 	IsActive    bool    `json:"is_active"`   // активен ли барбер

@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"garage-barbershop/internal/models"
 
 	"gorm.io/gorm"
@@ -75,18 +76,18 @@ func (r *userRepository) Delete(id uint) error {
 	return r.db.Delete(&models.User{}, id).Error
 }
 
-// GetBarbers получает всех барберов
+// GetBarbers получает всех барберов (DEPRECATED - используйте RoleService.GetUsersWithRole)
 func (r *userRepository) GetBarbers() ([]models.User, error) {
-	var barbers []models.User
-	err := r.db.Where("role = ?", "barber").Find(&barbers).Error
-	return barbers, err
+	// Этот метод больше не работает с новой системой ролей
+	// Используйте RoleService.GetUsersWithRole(barberRoleID) вместо этого
+	return []models.User{}, fmt.Errorf("GetBarbers deprecated - используйте RoleService.GetUsersWithRole")
 }
 
-// GetClients получает всех клиентов
+// GetClients получает всех клиентов (DEPRECATED - используйте RoleService.GetUsersWithRole)
 func (r *userRepository) GetClients() ([]models.User, error) {
-	var clients []models.User
-	err := r.db.Where("role = ?", "client").Find(&clients).Error
-	return clients, err
+	// Этот метод больше не работает с новой системой ролей
+	// Используйте RoleService.GetUsersWithRole(clientRoleID) вместо этого
+	return []models.User{}, fmt.Errorf("GetClients deprecated - используйте RoleService.GetUsersWithRole")
 }
 
 // GetAll получает всех пользователей
@@ -96,9 +97,9 @@ func (r *userRepository) GetAll() ([]models.User, error) {
 	return users, err
 }
 
-// GetByRole получает пользователей по роли
+// GetByRole получает пользователей по роли (использует RoleRepository)
 func (r *userRepository) GetByRole(role string) ([]models.User, error) {
-	var users []models.User
-	err := r.db.Where("role = ?", role).Find(&users).Error
-	return users, err
+	// Этот метод теперь должен работать через RoleRepository
+	// Пока возвращаем пустой массив, так как нужен RoleRepository
+	return []models.User{}, fmt.Errorf("GetByRole требует RoleRepository - используйте RoleService.GetUsersWithRole")
 }

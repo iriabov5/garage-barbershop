@@ -15,14 +15,14 @@ import (
 func TestUserService_CreateUser(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
-	userService := services.NewUserService(mockRepo)
+	mockRoleRepo := new(MockRoleRepository)
+	userService := services.NewUserService(mockRepo, mockRoleRepo)
 
 	user := &models.User{
 		TelegramID: 12345,
 		Username:   "testuser",
 		FirstName:  "John",
 		LastName:   "Doe",
-		Role:       "client",
 	}
 
 	// Настраиваем мок
@@ -40,14 +40,14 @@ func TestUserService_CreateUser(t *testing.T) {
 func TestUserService_CreateUser_Error(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
-	userService := services.NewUserService(mockRepo)
+	mockRoleRepo := new(MockRoleRepository)
+	userService := services.NewUserService(mockRepo, mockRoleRepo)
 
 	user := &models.User{
 		TelegramID: 12345,
 		Username:   "testuser",
 		FirstName:  "John",
 		LastName:   "Doe",
-		Role:       "client",
 	}
 
 	// Настраиваем мок для возврата ошибки
@@ -66,7 +66,8 @@ func TestUserService_CreateUser_Error(t *testing.T) {
 func TestUserService_RegisterBarber(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
-	userService := services.NewUserService(mockRepo)
+	mockRoleRepo := new(MockRoleRepository)
+	userService := services.NewUserService(mockRepo, mockRoleRepo)
 
 	telegramID := int64(12345)
 	username := "barber_user"
@@ -74,8 +75,13 @@ func TestUserService_RegisterBarber(t *testing.T) {
 	lastName := "Barber"
 	email := "barber@example.com"
 
-	// Настраиваем мок
+	// Настраиваем моки
 	mockRepo.On("Create", mock.AnythingOfType("*models.User")).Return(nil)
+
+	// Моки для ролей
+	barberRole := &models.Role{ID: 1, Name: "barber"}
+	mockRoleRepo.On("GetRoleByName", "barber").Return(barberRole, nil)
+	mockRoleRepo.On("AssignRoleToUser", mock.AnythingOfType("uint"), mock.AnythingOfType("uint"), mock.AnythingOfType("uint")).Return(nil)
 
 	// Act
 	barber, err := userService.RegisterBarber(telegramID, username, firstName, lastName, email)
@@ -87,7 +93,7 @@ func TestUserService_RegisterBarber(t *testing.T) {
 	assert.Equal(t, username, barber.Username)
 	assert.Equal(t, firstName, barber.FirstName)
 	assert.Equal(t, lastName, barber.LastName)
-	assert.Equal(t, "barber", barber.Role)
+	// Роли теперь проверяются через RoleService
 	assert.True(t, barber.IsActive)
 	assert.Equal(t, 5.0, barber.Rating)
 	mockRepo.AssertExpectations(t)
@@ -97,7 +103,8 @@ func TestUserService_RegisterBarber(t *testing.T) {
 func TestUserService_RegisterClient(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
-	userService := services.NewUserService(mockRepo)
+	mockRoleRepo := new(MockRoleRepository)
+	userService := services.NewUserService(mockRepo, mockRoleRepo)
 
 	telegramID := int64(67890)
 	username := "client_user"
@@ -105,8 +112,13 @@ func TestUserService_RegisterClient(t *testing.T) {
 	lastName := "Client"
 	email := "client@example.com"
 
-	// Настраиваем мок
+	// Настраиваем моки
 	mockRepo.On("Create", mock.AnythingOfType("*models.User")).Return(nil)
+
+	// Моки для ролей
+	clientRole := &models.Role{ID: 2, Name: "client"}
+	mockRoleRepo.On("GetRoleByName", "client").Return(clientRole, nil)
+	mockRoleRepo.On("AssignRoleToUser", mock.AnythingOfType("uint"), mock.AnythingOfType("uint"), mock.AnythingOfType("uint")).Return(nil)
 
 	// Act
 	client, err := userService.RegisterClient(telegramID, username, firstName, lastName, email)
@@ -118,7 +130,7 @@ func TestUserService_RegisterClient(t *testing.T) {
 	assert.Equal(t, username, client.Username)
 	assert.Equal(t, firstName, client.FirstName)
 	assert.Equal(t, lastName, client.LastName)
-	assert.Equal(t, "client", client.Role)
+	// Роли теперь проверяются через RoleService
 	mockRepo.AssertExpectations(t)
 }
 
@@ -126,7 +138,8 @@ func TestUserService_RegisterClient(t *testing.T) {
 func TestUserService_GetUserByID(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
-	userService := services.NewUserService(mockRepo)
+	mockRoleRepo := new(MockRoleRepository)
+	userService := services.NewUserService(mockRepo, mockRoleRepo)
 
 	userID := uint(1)
 	expectedUser := &models.User{
@@ -135,7 +148,6 @@ func TestUserService_GetUserByID(t *testing.T) {
 		Username:   "testuser",
 		FirstName:  "John",
 		LastName:   "Doe",
-		Role:       "client",
 	}
 
 	// Настраиваем мок
@@ -157,7 +169,8 @@ func TestUserService_GetUserByID(t *testing.T) {
 func TestUserService_GetUserByID_NotFound(t *testing.T) {
 	// Arrange
 	mockRepo := new(MockUserRepository)
-	userService := services.NewUserService(mockRepo)
+	mockRoleRepo := new(MockRoleRepository)
+	userService := services.NewUserService(mockRepo, mockRoleRepo)
 
 	userID := uint(999)
 

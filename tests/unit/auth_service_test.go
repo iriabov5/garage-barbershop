@@ -40,7 +40,6 @@ func TestAuthService_AuthenticateUser_ExistingUser(t *testing.T) {
 		Username:   "old_username",
 		FirstName:  "Old",
 		LastName:   "Name",
-		Role:       "client",
 		IsActive:   true,
 	}
 
@@ -49,7 +48,7 @@ func TestAuthService_AuthenticateUser_ExistingUser(t *testing.T) {
 	assert.Equal(t, "old_username", existingUser.Username)
 	assert.Equal(t, "Old", existingUser.FirstName)
 	assert.Equal(t, "Name", existingUser.LastName)
-	assert.Equal(t, "client", existingUser.Role)
+	// Роли теперь проверяются через RoleService
 	assert.True(t, existingUser.IsActive)
 }
 
@@ -62,7 +61,6 @@ func TestAuthService_AuthenticateUser_NewUser(t *testing.T) {
 		Username:   "testuser",
 		FirstName:  "John",
 		LastName:   "Doe",
-		Role:       "client",
 		IsActive:   true,
 	}
 
@@ -70,7 +68,7 @@ func TestAuthService_AuthenticateUser_NewUser(t *testing.T) {
 	assert.Equal(t, "testuser", user.Username)
 	assert.Equal(t, "John", user.FirstName)
 	assert.Equal(t, "Doe", user.LastName)
-	assert.Equal(t, "client", user.Role)
+	// Роли теперь проверяются через RoleService
 	assert.True(t, user.IsActive)
 }
 
@@ -104,7 +102,7 @@ func TestAuthService_ParseJWT(t *testing.T) {
 	claims := &models.TokenClaims{
 		UserID:     1,
 		TelegramID: 12345,
-		Role:       "client",
+		Roles:      []string{"client"}, // Добавляем роли для теста
 		Type:       "access",
 		Exp:        time.Now().Add(15 * time.Minute).Unix(),
 		Iat:        time.Now().Unix(),
@@ -114,7 +112,7 @@ func TestAuthService_ParseJWT(t *testing.T) {
 	// Assert
 	assert.Equal(t, uint(1), claims.UserID)
 	assert.Equal(t, int64(12345), claims.TelegramID)
-	assert.Equal(t, "client", claims.Role)
+	assert.Contains(t, claims.Roles, "client")
 	assert.Equal(t, "access", claims.Type)
 	assert.True(t, claims.IsAccessToken())
 	assert.False(t, claims.IsRefreshToken())

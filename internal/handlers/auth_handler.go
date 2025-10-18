@@ -109,12 +109,11 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Получаем пользователя (в реальном приложении нужно получить из БД)
-	// Для упрощения создаем временного пользователя
-	user := &models.User{
-		ID:         claims.UserID,
-		TelegramID: claims.TelegramID,
-		Role:       claims.Role,
+	// Получаем пользователя из БД
+	user, err := h.authService.GetUserByID(claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Пользователь не найден"})
+		return
 	}
 
 	// Генерируем новую пару токенов

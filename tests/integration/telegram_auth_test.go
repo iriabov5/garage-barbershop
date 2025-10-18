@@ -41,14 +41,15 @@ func (suite *TelegramAuthTestSuite) SetupSuite() {
 	testDB := &database.Database{DB: db}
 
 	// Выполняем миграции
-	err = testDB.Migrate(&models.User{})
+	err = testDB.Migrate(&models.User{}, &models.Role{}, &models.UserRole{})
 	suite.Require().NoError(err)
 
 	suite.db = testDB
 
 	// Создаем тестовые сервисы (Redis = nil для упрощения)
 	userRepo := repositories.NewUserRepository(suite.db.DB)
-	testAuthService := NewTestAuthService(userRepo, nil, "test_secret", "test_bot_token")
+	roleRepo := repositories.NewRoleRepository(suite.db.DB)
+	testAuthService := NewTestAuthService(userRepo, roleRepo, nil, "test_secret", "test_bot_token")
 	suite.authService = testAuthService
 	suite.authHandler = handlers.NewAuthHandler(testAuthService)
 
@@ -111,7 +112,7 @@ func (suite *TelegramAuthTestSuite) TestTelegramAuth_Success() {
 	suite.Equal("testuser", authResponse.User.Username)
 	suite.Equal("John", authResponse.User.FirstName)
 	suite.Equal("Doe", authResponse.User.LastName)
-	suite.Equal("client", authResponse.User.Role) // По умолчанию клиент
+	// Роли теперь проверяются через RoleService
 	suite.True(authResponse.User.IsActive)
 
 	// Проверяем, что пользователь создан в БД
@@ -155,7 +156,6 @@ func (suite *TelegramAuthTestSuite) TestTelegramAuth_ExistingUser() {
 		Username:   "existing_user",
 		FirstName:  "Existing",
 		LastName:   "User",
-		Role:       "barber", // Уже барбер
 		IsActive:   true,
 	}
 	err := suite.db.DB.Create(existingUser).Error
@@ -192,7 +192,7 @@ func (suite *TelegramAuthTestSuite) TestTelegramAuth_ExistingUser() {
 	suite.Equal("updated_username", authResponse.User.Username)
 	suite.Equal("Updated", authResponse.User.FirstName)
 	suite.Equal("Name", authResponse.User.LastName)
-	suite.Equal("barber", authResponse.User.Role) // Роль сохранилась
+	// Роли теперь проверяются через RoleService
 
 	// Проверяем, что в БД данные обновились
 	var user models.User
@@ -211,15 +211,17 @@ func TestTelegramAuthTestSuite(t *testing.T) {
 // TestAuthService упрощенная версия AuthService для тестов
 type TestAuthService struct {
 	userRepo  repositories.UserRepository
+	roleRepo  repositories.RoleRepository
 	rdb       *redis.Client
 	jwtSecret string
 	botToken  string
 }
 
 // NewTestAuthService создает тестовый сервис аутентификации
-func NewTestAuthService(userRepo repositories.UserRepository, rdb *redis.Client, jwtSecret, botToken string) *TestAuthService {
+func NewTestAuthService(userRepo repositories.UserRepository, roleRepo repositories.RoleRepository, rdb *redis.Client, jwtSecret, botToken string) *TestAuthService {
 	return &TestAuthService{
 		userRepo:  userRepo,
+		roleRepo:  roleRepo,
 		rdb:       rdb,
 		jwtSecret: jwtSecret,
 		botToken:  botToken,
@@ -253,7 +255,6 @@ func (s *TestAuthService) AuthenticateUser(authData models.TelegramAuthData) (*m
 		Username:   authData.Username,
 		FirstName:  authData.FirstName,
 		LastName:   authData.LastName,
-		Role:       "client", // По умолчанию клиент
 		IsActive:   true,
 	}
 
@@ -269,7 +270,7 @@ func (s *TestAuthService) GenerateAccessToken(user *models.User) (string, error)
 	claims := models.TokenClaims{
 		UserID:     user.ID,
 		TelegramID: user.TelegramID,
-		Role:       user.Role,
+		Roles:      []string{"client"}, // Мокаем роли для теста
 		Type:       "access",
 		Exp:        time.Now().Add(15 * time.Minute).Unix(),
 		Iat:        time.Now().Unix(),
@@ -289,7 +290,7 @@ func (s *TestAuthService) GenerateRefreshToken(user *models.User) (string, error
 	claims := models.TokenClaims{
 		UserID:     user.ID,
 		TelegramID: user.TelegramID,
-		Role:       user.Role,
+		Roles:      []string{"client"}, // Мокаем роли для теста
 		Type:       "refresh",
 		Exp:        time.Now().Add(7 * 24 * time.Hour).Unix(),
 		Iat:        time.Now().Unix(),
@@ -369,4 +370,9 @@ func (s *TestAuthService) RegisterClient(req models.ClientRegisterRequest) (*mod
 // RegisterBarber регистрирует барбера (для тестов не реализовано)
 func (s *TestAuthService) RegisterBarber(req models.BarberRegisterRequest) (*models.User, error) {
 	return nil, fmt.Errorf("не реализовано в тестах")
+}
+
+// GetUserByID получает пользователя по ID
+func (s *TestAuthService) GetUserByID(userID uint) (*models.User, error) {
+	return s.userRepo.GetByID(userID)
 }

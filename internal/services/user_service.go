@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"garage-barbershop/internal/models"
 	"garage-barbershop/internal/repositories"
 )
@@ -23,12 +24,14 @@ type UserService interface {
 // userService реализация сервиса пользователей
 type userService struct {
 	userRepo repositories.UserRepository
+	roleRepo repositories.RoleRepository
 }
 
 // NewUserService создает новый сервис пользователей
-func NewUserService(userRepo repositories.UserRepository) UserService {
+func NewUserService(userRepo repositories.UserRepository, roleRepo repositories.RoleRepository) UserService {
 	return &userService{
 		userRepo: userRepo,
+		roleRepo: roleRepo,
 	}
 }
 
@@ -75,7 +78,6 @@ func (s *userService) RegisterBarber(telegramID int64, username, firstName, last
 		FirstName:  firstName,
 		LastName:   lastName,
 		Email:      email,
-		Role:       "barber",
 		IsActive:   true,
 		Rating:     5.0, // Начальный рейтинг
 	}
@@ -83,6 +85,15 @@ func (s *userService) RegisterBarber(telegramID int64, username, firstName, last
 	err := s.userRepo.Create(barber)
 	if err != nil {
 		return nil, err
+	}
+
+	// Назначаем роль "barber"
+	barberRole, err := s.roleRepo.GetRoleByName("barber")
+	if err != nil {
+		return nil, fmt.Errorf("роль barber не найдена: %v", err)
+	}
+	if err := s.roleRepo.AssignRoleToUser(barber.ID, barberRole.ID, barber.ID); err != nil {
+		return nil, fmt.Errorf("ошибка назначения роли: %v", err)
 	}
 
 	return barber, nil
@@ -96,12 +107,20 @@ func (s *userService) RegisterClient(telegramID int64, username, firstName, last
 		FirstName:  firstName,
 		LastName:   lastName,
 		Email:      email,
-		Role:       "client",
 	}
 
 	err := s.userRepo.Create(client)
 	if err != nil {
 		return nil, err
+	}
+
+	// Назначаем роль "client"
+	clientRole, err := s.roleRepo.GetRoleByName("client")
+	if err != nil {
+		return nil, fmt.Errorf("роль client не найдена: %v", err)
+	}
+	if err := s.roleRepo.AssignRoleToUser(client.ID, clientRole.ID, client.ID); err != nil {
+		return nil, fmt.Errorf("ошибка назначения роли: %v", err)
 	}
 
 	return client, nil
@@ -114,5 +133,11 @@ func (s *userService) GetAllUsers() ([]models.User, error) {
 
 // GetUsersByRole возвращает пользователей по роли
 func (s *userService) GetUsersByRole(role string) ([]models.User, error) {
-	return s.userRepo.GetByRole(role)
+	// Используем RoleService для получения пользователей по роли
+	roleObj, err := s.roleRepo.GetRoleByName(role)
+	if err != nil {
+		return nil, fmt.Errorf("роль %s не найдена: %v", role, err)
+	}
+
+	return s.roleRepo.GetUsersWithRole(roleObj.ID)
 }

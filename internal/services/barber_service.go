@@ -22,12 +22,13 @@ type BarberService interface {
 
 // barberService реализация BarberService
 type barberService struct {
-	userRepo repositories.UserRepository
+	userRepo  repositories.UserRepository
+	roleRepo  repositories.RoleRepository
 }
 
 // NewBarberService создает новый экземпляр BarberService
-func NewBarberService(userRepo repositories.UserRepository) BarberService {
-	return &barberService{userRepo: userRepo}
+func NewBarberService(userRepo repositories.UserRepository, roleRepo repositories.RoleRepository) BarberService {
+	return &barberService{userRepo: userRepo, roleRepo: roleRepo}
 }
 
 // UpdateBarber обновляет барбера (только админ)
@@ -39,7 +40,7 @@ func (s *barberService) UpdateBarber(barberID uint, req models.BarberUpdateReque
 	}
 
 	// Проверяем, что это барбер
-	if barber.Role != "barber" {
+	if !s.roleRepo.HasUserRole(barberID, "barber") {
 		return nil, fmt.Errorf("пользователь не является барбером")
 	}
 
@@ -88,14 +89,8 @@ func (s *barberService) UpdateBarber(barberID uint, req models.BarberUpdateReque
 
 // DeleteBarber удаляет барбера (только админ)
 func (s *barberService) DeleteBarber(barberID uint) error {
-	// Получаем барбера
-	barber, err := s.userRepo.GetByID(barberID)
-	if err != nil {
-		return fmt.Errorf("барбер не найден: %v", err)
-	}
-
 	// Проверяем, что это барбер
-	if barber.Role != "barber" {
+	if !s.roleRepo.HasUserRole(barberID, "barber") {
 		return fmt.Errorf("пользователь не является барбером")
 	}
 
@@ -115,7 +110,7 @@ func (s *barberService) GetBarberByID(barberID uint) (*models.User, error) {
 	}
 
 	// Проверяем, что это барбер
-	if barber.Role != "barber" {
+	if !s.roleRepo.HasUserRole(barberID, "barber") {
 		return nil, fmt.Errorf("пользователь не является барбером")
 	}
 
@@ -136,7 +131,7 @@ func (s *barberService) UpdateBarberSelf(barberID uint, req models.BarberSelfUpd
 	}
 
 	// Проверяем, что это барбер
-	if barber.Role != "barber" {
+	if !s.roleRepo.HasUserRole(barberID, "barber") {
 		return nil, fmt.Errorf("пользователь не является барбером")
 	}
 
@@ -173,7 +168,7 @@ func (s *barberService) GetBarberSelf(barberID uint) (*models.User, error) {
 	}
 
 	// Проверяем, что это барбер
-	if barber.Role != "barber" {
+	if !s.roleRepo.HasUserRole(barberID, "barber") {
 		return nil, fmt.Errorf("пользователь не является барбером")
 	}
 
