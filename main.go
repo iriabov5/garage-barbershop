@@ -160,20 +160,22 @@ func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers
 	)
 	http.HandleFunc("/api/admin/barbers", adminBarberHandler)
 
+	// Создаем универсальный обработчик для всех операций с барберами по ID
 	adminBarberByIDHandler := middleware.HTTPAuthMiddleware(authService)(
-		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminGetBarber),
+		middleware.HTTPRequireRoleMiddleware("admin")(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				barberHandler.AdminGetBarber(w, r)
+			case http.MethodPut:
+				barberHandler.AdminUpdateBarber(w, r)
+			case http.MethodDelete:
+				barberHandler.AdminDeleteBarber(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		}),
 	)
 	http.HandleFunc("/api/admin/barbers/", adminBarberByIDHandler)
-
-	adminUpdateBarberHandler := middleware.HTTPAuthMiddleware(authService)(
-		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminUpdateBarber),
-	)
-	http.HandleFunc("/api/admin/barbers/", adminUpdateBarberHandler)
-
-	adminDeleteBarberHandler := middleware.HTTPAuthMiddleware(authService)(
-		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminDeleteBarber),
-	)
-	http.HandleFunc("/api/admin/barbers/", adminDeleteBarberHandler)
 
 	// Маршруты для барберов (самоуправление)
 	barberSelfHandler := middleware.HTTPAuthMiddleware(authService)(
