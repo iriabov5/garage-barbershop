@@ -44,6 +44,24 @@ type DirectRegisterRequest struct {
 	Role      string `json:"role" binding:"required,oneof=client barber"`
 }
 
+// ClientRegisterRequest представляет запрос на регистрацию клиента
+type ClientRegisterRequest struct {
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=6"`
+	FirstName string `json:"first_name" binding:"required"`
+	LastName  string `json:"last_name" binding:"required"`
+}
+
+// BarberRegisterRequest представляет запрос на регистрацию барбера (только админ)
+type BarberRegisterRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	Password    string `json:"password" binding:"required,min=6"`
+	FirstName   string `json:"first_name" binding:"required"`
+	LastName    string `json:"last_name" binding:"required"`
+	Specialties string `json:"specialties"` // специализации
+	Experience  int    `json:"experience"`  // опыт в годах
+}
+
 // TokenClaims представляет claims JWT токена
 type TokenClaims struct {
 	UserID     uint   `json:"user_id"`

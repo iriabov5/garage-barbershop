@@ -360,3 +360,13 @@ func (s *TestAuthService) RegisterUserDirect(req models.DirectRegisterRequest) (
 func (s *TestAuthService) LoginDirect(req models.DirectLoginRequest) (*models.User, error) {
 	return nil, fmt.Errorf("не реализовано в тестах")
 }
+
+// RegisterClient регистрирует клиента (для тестов не реализовано)
+func (s *TestAuthService) RegisterClient(req models.ClientRegisterRequest) (*models.User, error) {
+	return nil, fmt.Errorf("не реализовано в тестах")
+}
+
+// RegisterBarber регистрирует барбера (для тестов не реализовано)
+func (s *TestAuthService) RegisterBarber(req models.BarberRegisterRequest) (*models.User, error) {
+	return nil, fmt.Errorf("не реализовано в тестах")
+}

@@ -11,6 +11,7 @@ import (
 	"garage-barbershop/internal/config"
 	"garage-barbershop/internal/database"
 	"garage-barbershop/internal/handlers"
+	"garage-barbershop/internal/middleware"
 	"garage-barbershop/internal/models"
 	"garage-barbershop/internal/repositories"
 	"garage-barbershop/internal/services"
@@ -116,16 +117,28 @@ func setupDependencies() {
 	authHTTPHandler := handlers.NewAuthHTTPHandler(authService)
 
 	// Настраиваем API routes
-	setupAPIRoutes(userHandler, authHTTPHandler)
+	setupAPIRoutes(userHandler, authHTTPHandler, authService)
 }
 
 // Настройка API маршрутов
-func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler) {
+func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler, authService services.AuthService) {
+	// Создаем handler для ролевой авторизации
+	authRolesHandler := handlers.NewAuthRolesHandler(authService)
+
 	// Публичные маршруты (не требуют аутентификации)
 	http.HandleFunc("/api/auth/telegram", authHTTPHandler.TelegramAuth)
 	http.HandleFunc("/api/auth/refresh", authHTTPHandler.RefreshToken)
-	http.HandleFunc("/api/auth/register", authHTTPHandler.RegisterDirect)
+	http.HandleFunc("/api/auth/register", authHTTPHandler.RegisterDirect) // Старый endpoint (deprecated)
 	http.HandleFunc("/api/auth/login", authHTTPHandler.LoginDirect)
+	
+	// Новые ролевые маршруты
+	http.HandleFunc("/api/auth/register/client", authRolesHandler.RegisterClient) // Публичный
+	
+	// Защищенный endpoint для регистрации барберов (только админ)
+	barberRegisterHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("admin")(authRolesHandler.RegisterBarber),
+	)
+	http.HandleFunc("/api/auth/register/barber", barberRegisterHandler)
 
 	// Защищенные маршруты (требуют JWT токен)
 	http.HandleFunc("/api/auth/logout", authHTTPHandler.Logout)

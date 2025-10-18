@@ -27,9 +27,11 @@ type AuthService interface {
 	IsRefreshTokenValid(userID uint, refreshToken string) bool
 	UpdateRefreshToken(userID uint, oldToken, newToken string) error
 	RevokeRefreshToken(userID uint) error
-	
+
 	// Прямая авторизация (без Telegram)
 	RegisterUserDirect(req models.DirectRegisterRequest) (*models.User, error)
+	RegisterClient(req models.ClientRegisterRequest) (*models.User, error)
+	RegisterBarber(req models.BarberRegisterRequest) (*models.User, error)
 	LoginDirect(req models.DirectLoginRequest) (*models.User, error)
 	HashPassword(password string) (string, error)
 	CheckPassword(password, hash string) bool
@@ -297,6 +299,75 @@ func (s *authService) LoginDirect(req models.DirectLoginRequest) (*models.User, 
 	// Проверяем, что пользователь активен
 	if !user.IsActive {
 		return nil, fmt.Errorf("пользователь деактивирован")
+	}
+
+	return user, nil
+}
+
+// RegisterClient регистрирует клиента (публичный endpoint)
+func (s *authService) RegisterClient(req models.ClientRegisterRequest) (*models.User, error) {
+	// Проверяем, что email не занят
+	existingUser, err := s.userRepo.GetByEmail(req.Email)
+	if err == nil && existingUser != nil {
+		return nil, fmt.Errorf("пользователь с email %s уже существует", req.Email)
+	}
+
+	// Хешируем пароль
+	passwordHash, err := s.HashPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка хеширования пароля: %v", err)
+	}
+
+	// Создаем клиента
+	user := &models.User{
+		Email:        req.Email,
+		PasswordHash: passwordHash,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Role:         "client",
+		AuthMethod:   "direct",
+		IsActive:     true,
+	}
+
+	// Сохраняем в БД
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, fmt.Errorf("ошибка создания пользователя: %v", err)
+	}
+
+	return user, nil
+}
+
+// RegisterBarber регистрирует барбера (только админ)
+func (s *authService) RegisterBarber(req models.BarberRegisterRequest) (*models.User, error) {
+	// Проверяем, что email не занят
+	existingUser, err := s.userRepo.GetByEmail(req.Email)
+	if err == nil && existingUser != nil {
+		return nil, fmt.Errorf("пользователь с email %s уже существует", req.Email)
+	}
+
+	// Хешируем пароль
+	passwordHash, err := s.HashPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка хеширования пароля: %v", err)
+	}
+
+	// Создаем барбера
+	user := &models.User{
+		Email:        req.Email,
+		PasswordHash: passwordHash,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Role:         "barber",
+		AuthMethod:   "direct",
+		IsActive:     true,
+		Specialties:  req.Specialties,
+		Experience:   req.Experience,
+		Rating:       5.0, // Начальный рейтинг
+	}
+
+	// Сохраняем в БД
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, fmt.Errorf("ошибка создания пользователя: %v", err)
 	}
 
 	return user, nil

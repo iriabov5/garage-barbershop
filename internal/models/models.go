@@ -26,7 +26,7 @@ type User struct {
 	AuthMethod   string `json:"auth_method"`                   // "telegram" или "direct"
 
 	// Роль пользователя
-	Role string `json:"role"` // "barber" или "client"
+	Role string `json:"role"` // "admin", "barber" или "client"
 
 	// Для барбера
 	IsActive    bool    `json:"is_active"`   // активен ли барбер
