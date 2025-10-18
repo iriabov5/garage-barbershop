@@ -117,23 +117,27 @@ func setupDependencies() {
 	authHTTPHandler := handlers.NewAuthHTTPHandler(authService)
 
 	// Настраиваем API routes
-	setupAPIRoutes(userHandler, authHTTPHandler, authService)
+	setupAPIRoutes(userHandler, authHTTPHandler, authService, userRepo)
 }
 
 // Настройка API маршрутов
-func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler, authService services.AuthService) {
+func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers.AuthHTTPHandler, authService services.AuthService, userRepo repositories.UserRepository) {
 	// Создаем handler для ролевой авторизации
 	authRolesHandler := handlers.NewAuthRolesHandler(authService)
+
+	// Создаем сервис для барберов
+	barberService := services.NewBarberService(userRepo)
+	barberHandler := handlers.NewBarberHandler(barberService)
 
 	// Публичные маршруты (не требуют аутентификации)
 	http.HandleFunc("/api/auth/telegram", authHTTPHandler.TelegramAuth)
 	http.HandleFunc("/api/auth/refresh", authHTTPHandler.RefreshToken)
 	http.HandleFunc("/api/auth/register", authHTTPHandler.RegisterDirect) // Старый endpoint (deprecated)
 	http.HandleFunc("/api/auth/login", authHTTPHandler.LoginDirect)
-	
+
 	// Новые ролевые маршруты
 	http.HandleFunc("/api/auth/register/client", authRolesHandler.RegisterClient) // Публичный
-	
+
 	// Защищенный endpoint для регистрации барберов (только админ)
 	barberRegisterHandler := middleware.HTTPAuthMiddleware(authService)(
 		middleware.HTTPRequireRoleMiddleware("admin")(authRolesHandler.RegisterBarber),
@@ -148,6 +152,38 @@ func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers
 	http.HandleFunc("/api/users", userHandler.GetUsers)
 	http.HandleFunc("/api/users/", userHandler.GetUser)
 	http.HandleFunc("/api/users/create", userHandler.CreateUser)
+
+	// Админские маршруты для управления барберами (только админ)
+	adminBarberHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminGetAllBarbers),
+	)
+	http.HandleFunc("/api/admin/barbers", adminBarberHandler)
+
+	adminBarberByIDHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminGetBarber),
+	)
+	http.HandleFunc("/api/admin/barbers/", adminBarberByIDHandler)
+
+	adminUpdateBarberHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminUpdateBarber),
+	)
+	http.HandleFunc("/api/admin/barbers/", adminUpdateBarberHandler)
+
+	adminDeleteBarberHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("admin")(barberHandler.AdminDeleteBarber),
+	)
+	http.HandleFunc("/api/admin/barbers/", adminDeleteBarberHandler)
+
+	// Маршруты для барберов (самоуправление)
+	barberSelfHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("barber")(barberHandler.BarberGetSelf),
+	)
+	http.HandleFunc("/api/barber/profile", barberSelfHandler)
+
+	barberUpdateSelfHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("barber")(barberHandler.BarberUpdateSelf),
+	)
+	http.HandleFunc("/api/barber/profile", barberUpdateSelfHandler)
 
 	log.Println("✅ API маршруты настроены")
 }

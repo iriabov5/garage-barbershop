@@ -62,6 +62,25 @@ type BarberRegisterRequest struct {
 	Experience  int    `json:"experience"`  // опыт в годах
 }
 
+// BarberUpdateRequest представляет запрос на обновление барбера (админ)
+type BarberUpdateRequest struct {
+	Email       string   `json:"email" binding:"omitempty,email"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
+	Specialties string   `json:"specialties"`
+	Experience  int      `json:"experience"`
+	IsActive    *bool    `json:"is_active"` // указатель для различения false и отсутствия поля
+	Rating      *float64 `json:"rating"`    // указатель для различения 0 и отсутствия поля
+}
+
+// BarberSelfUpdateRequest представляет запрос на обновление собственного профиля барбера
+type BarberSelfUpdateRequest struct {
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	Specialties string `json:"specialties"`
+	Experience  int    `json:"experience"`
+}
+
 // TokenClaims представляет claims JWT токена
 type TokenClaims struct {
 	UserID     uint   `json:"user_id"`

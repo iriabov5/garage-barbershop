@@ -68,4 +68,3 @@ func (d *Database) Close() error {
 
 	return sqlDB.Close()
 }
-

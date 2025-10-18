@@ -52,4 +52,3 @@ func (c *Config) IsProduction() bool {
 func (c *Config) IsDevelopment() bool {
 	return c.Environment == "development"
 }
-
