@@ -178,15 +178,19 @@ func setupAPIRoutes(userHandler *handlers.UserHandler, authHTTPHandler *handlers
 	http.HandleFunc("/api/admin/barbers/", adminBarberByIDHandler)
 
 	// Маршруты для барберов (самоуправление)
-	barberSelfHandler := middleware.HTTPAuthMiddleware(authService)(
-		middleware.HTTPRequireRoleMiddleware("barber")(barberHandler.BarberGetSelf),
+	barberProfileHandler := middleware.HTTPAuthMiddleware(authService)(
+		middleware.HTTPRequireRoleMiddleware("barber")(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				barberHandler.BarberGetSelf(w, r)
+			case http.MethodPut:
+				barberHandler.BarberUpdateSelf(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		}),
 	)
-	http.HandleFunc("/api/barber/profile", barberSelfHandler)
-
-	barberUpdateSelfHandler := middleware.HTTPAuthMiddleware(authService)(
-		middleware.HTTPRequireRoleMiddleware("barber")(barberHandler.BarberUpdateSelf),
-	)
-	http.HandleFunc("/api/barber/profile", barberUpdateSelfHandler)
+	http.HandleFunc("/api/barber/profile", barberProfileHandler)
 
 	log.Println("✅ API маршруты настроены")
 }
